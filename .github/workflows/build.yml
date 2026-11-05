@@ -430,8 +430,7 @@ jobs:
                       -HashAlgorithm SHA256 `
                       -KeyExportPolicy Exportable `
                       -NotAfter (Get-Date).AddDays(30)
-                  $env:JADYX_PFX_PASSWORD = [Convert]::ToHexString(
-                      [Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+                  $env:JADYX_PFX_PASSWORD = [Guid]::NewGuid().ToString("N")
                   $securePassword = ConvertTo-SecureString $env:JADYX_PFX_PASSWORD -AsPlainText -Force
                   Export-PfxCertificate -Cert $temporaryCert -FilePath $pfx `
                       -Password $securePassword | Out-Null
