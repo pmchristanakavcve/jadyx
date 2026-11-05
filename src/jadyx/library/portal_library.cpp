@@ -17,6 +17,7 @@
 #include <openssl/sha.h>
 #include "core/memory/cheat_text.h"
 #include "core/file_sys/common_funcs.h"
+#include "common/fs/path_util.h"
 #include "jadyx/cheats/cheat_store.h"
 #include "jadyx/content/content_actions.h"
 #include "jadyx/content/content_service.h"
