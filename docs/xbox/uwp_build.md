@@ -100,7 +100,13 @@ Pull-request CI runs do not package an APPX. To package artifacts from a previou
 successful CI run without recompiling, run **CI** with that run's ID in `source_run_id`.
 It reuses the unexpired `jadyx-build` and `spirv-to-dxil` artifacts, checks out their
 source commit, and signs/packages them. The source run must belong to the same
-repository and branch. The resulting `jadyx-package` artifact is retained for 14 days.
+repository and branch. If the project PFX secrets are configured, it uses the
+distribution certificate; otherwise this reuse-only path creates a one-off
+self-signed certificate for the package and removes its private key from the runner
+after signing. Install the included `.cer` to trust that package. A temporary signer
+cannot produce an in-place update over a package signed by the distribution
+certificate, and a later temporary run has a different signer. The resulting
+`jadyx-package` artifact is retained for 14 days.
 
 ## Notes / known follow-ups
 
