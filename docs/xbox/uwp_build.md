@@ -93,6 +93,16 @@ The `uwp-x64` preset (see `CMakePresets.json`) pins the option set, the WindowsS
 system name, and `DYNARMIC_UWP_APPCONTAINER=ON` (which forces dynarmic's W^X path and
 routes its JIT alloc/protect through `VirtualAllocFromApp`/`VirtualProtectFromApp`).
 
+## GitHub Actions packaging
+
+A manual run of **CI** builds and tests the UWP app, then creates a signed test APPX.
+Pull-request CI runs do not package an APPX. If the APPX job was skipped after a
+successful build, run **Package existing build** with that CI run's ID. It reuses the
+unexpired `jadyx-build` and `spirv-to-dxil` artifacts, checks out their source commit,
+and signs/packages without recompiling. The source run must be successful and belong
+to the same repository and branch. The resulting `jadyx-package` artifact is retained
+for 14 days.
+
 ## Notes / known follow-ups
 
 - **Partition strictness:** this build uses the default `WINAPI_FAMILY_DESKTOP_APP`

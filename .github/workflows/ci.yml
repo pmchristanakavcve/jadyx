@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Every pull request must build. A merge to main does not build again: the PR already built the
-# merged result (pull_request checks out the merge commit), and Release builds main itself. Run it
-# by hand (Actions -> CI -> Run workflow, on any branch) to also get a signed test appx as a 14-day
-# artifact.
+# merged result (pull_request checks out the merge commit), and Release builds main itself. A manual
+# run also produces a signed test appx as a 14-day artifact.
 
 name: CI
 
@@ -12,11 +11,6 @@ on:
   pull_request:
     paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
-    inputs:
-      package:
-        description: Also make a signed test appx
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -36,5 +30,5 @@ jobs:
   build:
     uses: ./.github/workflows/build.yml
     with:
-      package: ${{ github.event_name == 'workflow_dispatch' && inputs.package }}
+      package: ${{ github.event_name == 'workflow_dispatch' }}
     secrets: inherit
