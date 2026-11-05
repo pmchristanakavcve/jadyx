@@ -106,6 +106,11 @@ por minuto globales; renovar no reinicia limitador. No código/sesión en logs, 
 almacenamiento persistente del navegador. HTTP LAN sin cifrado, sin UPnP ni CORS abierto;
 Host exacto IP:puerto, Origin exacto cuando existe y obligatorio al emparejar. CSP,
 no-store/no-referrer/nosniff. Sin explorador arbitrario de archivos ni descarga de claves.
+La página no oculta el formulario hasta validar la sesión y cargar el estado inicial.
+Si esa consulta falla, conserva el código y permite reintentar con la sesión ya creada,
+sin volver a consumir el código. Los errores de emparejamiento distinguen código caducado,
+dirección/Origin incorrecto, límite de intentos, portal no disponible y fallo de red;
+los mensajes están traducidos en zh/en/es/pt-BR.
 
 El usuario no veía el código: fila8 fuera de7 filas visibles. Iniciar ahora abre página
 completa: URL, código112px agrupado4+4, Volver/Generar/Detener, mando/teclado/puntero con

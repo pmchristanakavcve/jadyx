@@ -28,11 +28,15 @@ concurrency:
 
 jobs:
   scripts:
-    name: release scripts
+    name: release and portal tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - run: python3 tools/xbox/tests/release.py
+      - name: Test browser portal pages
+        run: |
+          node tools/xbox/tests/network-portal-page.cjs
+          node tools/xbox/tests/log-export-page.cjs
 
   build:
     uses: ./.github/workflows/build.yml

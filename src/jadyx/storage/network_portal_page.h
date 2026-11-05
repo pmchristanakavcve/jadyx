@@ -261,6 +261,7 @@ const words=zh?{
  fileslabel:'选择 NSP、XCI 或 NRO 文件',namelabel:'目标文件名（仅单个文件）',send:'上传 / 继续',rename:'重命名待处理文件',pause:'暂停',discard:'删除未完成文件',
  kicker:'本地网络传送门','status-off':'未连接','status-on':'已连接','code-hint':'4 位验证码 · 每次打开传送门都会更换','files-drop':'或将文件拖到此处',files:'个文件',
  privacy:'仅限本地网络 · HTTP 连接未加密。',ok:'连接成功。',bad:'验证码错误或已过期。请在 Jadyx 中重新生成。',
+ origin:'页面地址与主机不匹配。请使用 Jadyx 显示的传送门地址。',network:'无法连接到主机。请确认设备在同一网络，并使用 Jadyx 显示的地址。',pairUnavailable:'传送门暂不可用。请检查主机上的 Jadyx 是否仍在游戏库页面。',
  lost:'连接已断开。请从 Jadyx 重新连接；已确认的进度会保留。',free:'可用空间',confirmed:'已确认',speed:'速度',eta:'剩余时间',queue:'队列',
  choose:'请选择一个或多个 NSP、XCI 或 NRO 文件。',same:'有不同的文件等待处理。请选择相同文件以继续，或删除未完成的传输。',
  receiving:'正在接收',paused:'已暂停。请选择相同文件以继续。',ready:'等待验证',validating:'正在验证文件',publishing:'正在加入游戏库',complete:'已加入游戏库',
@@ -276,6 +277,7 @@ const words=zh?{
  namelabel:'Nome de destino (um único arquivo)',send:'Enviar / retomar',rename:'Renomear arquivo pendente',pause:'Pausar',discard:'Apagar arquivo parcial',
  kicker:'Portal da rede local','status-off':'Desconectado','status-on':'Conectado','code-hint':'4 dígitos · muda cada vez que você abre o portal','files-drop':'ou arraste-os para cá',files:'arquivos',
  privacy:'Rede local · Conexão HTTP sem criptografia.',ok:'Conexão estabelecida.',bad:'Código incorreto ou expirado. Gere outro no Jadyx.',
+ origin:'O endereço da página não corresponde ao console. Use o endereço mostrado no Jadyx.',network:'Não foi possível conectar ao console. Confira se os dispositivos estão na mesma rede e use o endereço mostrado no Jadyx.',pairUnavailable:'O portal está temporariamente indisponível. Confira se o Jadyx continua aberto na biblioteca.',
  lost:'A conexão foi encerrada. Conecte-se de novo pelo Jadyx; o progresso confirmado é mantido.',free:'Espaço livre',confirmed:'Confirmado',
  speed:'Velocidade',eta:'Tempo restante',queue:'Na fila',choose:'Selecione um ou mais arquivos NSP, XCI ou NRO.',same:'Há outro arquivo pendente. Selecione o mesmo arquivo para retomá-lo ou apague a transferência parcial.',
  receiving:'Recebendo',paused:'Pausado. Selecione o mesmo arquivo para continuar.',ready:'Aguardando validação',validating:'Validando arquivo',publishing:'Adicionando à biblioteca',complete:'Instalado na biblioteca',
@@ -291,6 +293,7 @@ const words=zh?{
  namelabel:'Nombre de destino (un solo archivo)',send:'Subir / reanudar',rename:'Renombrar archivo pendiente',pause:'Pausar',discard:'Eliminar archivo parcial',
  kicker:'Portal de red local','status-off':'Sin conectar','status-on':'Conectado','code-hint':'4 dígitos · cambia cada vez que abres el portal','files-drop':'o arrástralos aquí',files:'archivos',
  privacy:'Red local · Conexión HTTP sin cifrado.',ok:'Conexión establecida.',bad:'Código incorrecto o caducado. Genera otro en Jadyx.',
+ origin:'La dirección de la página no coincide con la consola. Usa la dirección que muestra Jadyx.',network:'No se pudo conectar con la consola. Comprueba que ambos dispositivos estén en la misma red y usa la dirección que muestra Jadyx.',pairUnavailable:'El portal no está disponible temporalmente. Comprueba que Jadyx siga abierto en la biblioteca.',
  lost:'La conexión se ha cerrado. Vuelve a conectarte desde Jadyx; el progreso confirmado se conserva.',free:'Espacio libre',confirmed:'Confirmado',
  speed:'Velocidad',eta:'Tiempo restante',queue:'En cola',choose:'Selecciona uno o varios archivos NSP, XCI o NRO.',same:'Hay un archivo pendiente distinto. Selecciona el mismo archivo para reanudarlo o elimina la transferencia parcial.',
  receiving:'Recibiendo',paused:'En pausa. Selecciona el mismo archivo para continuar.',ready:'Esperando a validar',validating:'Validando archivo',publishing:'Añadiendo a la biblioteca',complete:'Instalado en la biblioteca',
@@ -300,7 +303,9 @@ const words=zh?{
  disk:'No se pudo escribir o publicar el archivo.',interrupted:'Transferencia interrumpida. Puedes reanudar desde el progreso confirmado.',
  partial:'Hay una transferencia pendiente. Reanúdala o elimínala.',recovery:'No se pudo recuperar el parcial. Elimínalo antes de iniciar otro.',unavailable:'La importación no está disponible en este momento.',destination:'El almacenamiento dev (D:) no está disponible. Elige el almacenamiento interno.',
  attempts:'Demasiados intentos. Espera un minuto.',version:'Versión de transferencia incompatible. Recarga la página.',idle:'Listo para importar.'
-}:{ok:'Connected.',bad:'Incorrect or expired code. Generate another in Jadyx.',lost:'Connection closed. Reconnect in Jadyx; confirmed progress is retained.',
+}:{ok:'Connected.',bad:'Incorrect or expired code. Generate another in Jadyx.',
+ origin:'The page address does not match the console. Open the portal using the address shown in Jadyx.',network:'Could not reach the console. Check that both devices are on the same network and use the address shown in Jadyx.',pairUnavailable:'The portal is temporarily unavailable. Check that Jadyx is still open in the library.',
+ lost:'Connection closed. Reconnect in Jadyx; confirmed progress is retained.',
  free:'Free space','where-internal':'Internal storage','where-developer':'Dev storage (D:)',confirmed:'Confirmed',speed:'Speed',eta:'Time left',queue:'Queued',choose:'Choose one or more NSP, XCI or NRO files.',files:'files',
  same:'A different file is pending. Select the same file to resume, or discard the partial upload.',receiving:'Receiving',paused:'Paused. Select the same file to continue.',
  ready:'Waiting for validation',validating:'Validating file',publishing:'Adding to library',complete:'Installed in your library',busy:'Wait for the operation in Jadyx to finish.',
@@ -377,20 +382,26 @@ async function refresh(){const response=await api('/api/v1/status');state=await 
 $('pair').addEventListener('submit',async event=>{
  event.preventDefault();$('connect').disabled=true;$('message').textContent='';
  try{
- const response=await fetch('/api/v1/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('code').value})});
- if(!response.ok){$('connection').textContent=response.status===429?words.attempts:words.bad;return;}
- session=(await response.json()).session;$('code').value='';$('pair').hidden=true;$('connection').textContent=words.ok;
- await refresh();clearInterval(timer);let polling=false;
+ if(!session){
+  const response=await fetch('/api/v1/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('code').value})});
+  if(!response.ok){$('connection').textContent=response.status===429?words.attempts:response.status===401?words.bad:response.status===403?words.origin:words.pairUnavailable;return;}
+  const paired=await response.json();
+  if(typeof paired.session!=='string'||!/^[0-9a-f]{64}$/.test(paired.session)){$('connection').textContent=words.pairUnavailable;return;}
+  session=paired.session;
+ }
+ await refresh();$('code').value='';$('pair').hidden=true;$('connection').textContent=words.ok;
+ clearInterval(timer);let polling=false;
  timer=setInterval(async()=>{if(polling)return;polling=true;try{await refresh();failures=0;$('connection').textContent=words.ok;}catch(error){
  // After the package went to Device Portal, the console going away is the install closing Jadyx.
  if(updateStarted&&(error.message==='lost'||++failures>=3)){clearInterval(timer);session='';updateGone=true;renderUpdate();}
  else if(error.message==='lost'){clearInterval(timer);stopped=true;if(currentXHR)currentXHR.abort();session='';$('pair').hidden=false;$('upload').hidden=true;$('connection').textContent=words.lost;}
  else $('connection').textContent=words.interrupted;
  }finally{polling=false;}},1000);
- }catch{$('connection').textContent=words.lost;}finally{$('connect').disabled=false;}
+ }catch(error){if(error.message==='lost')session='';$('connection').textContent=error.message==='lost'?words.lost:words.network;}finally{$('connect').disabled=false;}
 });
 // Only digits; the eighth one connects without reaching for the button.
 $('code').addEventListener('input',()=>{const code=$('code').value.replace(/\D/g,'').slice(0,4);$('code').value=code;
+ $('code').removeAttribute('aria-invalid');if(!code.length)$('connection').textContent='';
  if(code.length===4&&!$('connect').disabled)$('pair').requestSubmit?.();});
 // SHA-256 fallback is required because WebCrypto is not available on ordinary HTTP LAN origins.
 // Only first/last 64 KiB + file identity are sampled: this is a resume fingerprint, not full integrity validation.

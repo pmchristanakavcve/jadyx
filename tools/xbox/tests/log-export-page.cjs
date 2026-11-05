@@ -6,7 +6,7 @@ const script=page.match(/<script>([\s\S]*?)<\/script>/)[1];
 async function scenario(language){
  const elements=new Map(),callbacks=new Map();let clicks=0,grants=0,exports=0;
  const element=id=>{
-  if(!elements.has(id))elements.set(id,{value:'',files:[],textContent:'',hidden:false,disabled:false,
+  if(!elements.has(id))elements.set(id,{value:'',files:[],textContent:'',hidden:false,disabled:false,setAttribute(){},classList:{toggle(){}},
    addEventListener:(event,callback)=>callbacks.set(id+':'+event,callback),
    click:()=>{assert.equal(id,'logs-file');clicks++;}});
   return elements.get(id);
@@ -14,8 +14,8 @@ async function scenario(language){
  let logs={supported:true,phase:'idle',busy:false,total:5*1024**3,processed:0,compressed:0};
  const response=(data,status=200)=>({ok:status<400,status,json:async()=>structuredClone(data)});
  const fetch=async(path,options={})=>{
-  if(path==='/api/v1/pair')return response({session:'test-session'});
-  assert.equal(options.headers.Authorization,'Bearer test-session');
+  if(path==='/api/v1/pair')return response({session:'a'.repeat(64)});
+  assert.equal(options.headers.Authorization,'Bearer '+'a'.repeat(64));
   if(path==='/api/v1/status')return response({logs,transfer:{},system:{}});
   if(path==='/api/v1/logs/export'){
    if(options.method==='DELETE'){logs={...logs,phase:'cancelled',busy:false};return response(logs);}
@@ -27,7 +27,7 @@ async function scenario(language){
   }
   throw Error('Unexpected fetch (archive must be a native download): '+path);
  };
- const context=vm.createContext({document:{getElementById:element,documentElement:{}},navigator:{language},location:{search:''},
+ const context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{toggle(){}}}},navigator:{language},localStorage:{getItem:()=>language,setItem(){}},location:{search:''},
   URLSearchParams,TextEncoder,Uint8Array,Uint32Array,DataView,performance,fetch,
   setInterval:()=>1,clearInterval:()=>{},setTimeout,btoa:v=>Buffer.from(v,'binary').toString('base64')});
  vm.runInContext(script,context);
@@ -52,7 +52,8 @@ async function scenario(language){
  assert.equal(element('logs-download').disabled,false);
  logs={...logs,phase:'failed',error:'space'};await vm.runInContext('refresh()',context);
  assert.notEqual(element('logs-status').textContent,'');
- assert.match(element('logs-title').textContent,/Logs/);
+ const title=language==='es'?'Logs y capturas':language==='pt-BR'?'Logs e capturas':'Logs and captures';
+ assert.equal(element('logs-title').textContent,title);
 }
 (async()=>{for(const language of ['es','en','pt-BR'])await scenario(language);
  console.log('PASS: logs UI es/en/pt-BR, 5GiB progress, cancel/error, one native download started with the export, no browser archive Blob');

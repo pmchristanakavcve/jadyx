@@ -38,12 +38,21 @@ for(const size of [0,3,55,56,63,64,65,128,131072]){
  console.log('PASS: browser keys/firmware, ZIP/loose, review warning checkbox and explicit confirmation (mock HTTP)');
  for(const language of ['default','zh-CN','es','en','pt-BR'])await libraryScenario(language);
  console.log('PASS: browser library, save/cheat import, ticketed export/download, updates and game deletion (mock HTTP)');
+ await browserScenario({pairStatus:401,language:'zh-CN'});
+ await browserScenario({pairStatus:403,language:'zh-CN'});
+ await browserScenario({pairStatus:429,language:'zh-CN'});
+ await browserScenario({pairStatus:503,language:'zh-CN'});
+ await browserScenario({pairNetworkError:true,language:'zh-CN'});
+ await browserScenario({invalidSession:true,language:'zh-CN'});
+ await browserScenario({initialStatusFailure:true,language:'zh-CN'});
+ console.log('PASS: pairing success, localized errors, visible retry, invalid session and initial status recovery');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
 async function browserScenario(options){
- const elements=new Map(),callbacks=new Map();
+ const elements=new Map(),callbacks=new Map();let autoPairPromise;
  const element=id=>{
-  if(!elements.has(id))elements.set(id,{value:'',textContent:'',files:[],hidden:false,disabled:false,setAttribute(){},
+  if(!elements.has(id))elements.set(id,{value:'',textContent:'',files:[],hidden:false,disabled:false,setAttribute(){},removeAttribute(){},
+   requestSubmit:()=>{autoPairPromise=callbacks.get('pair:submit')({preventDefault(){}});},
    addEventListener:(event,callback)=>callbacks.set(id+':'+event,callback)});
   return elements.get(id);
  };
@@ -52,13 +61,21 @@ async function browserScenario(options){
   assert.ok(end-start<=65536,'large file must never be loaded as ArrayBuffer');return new Uint8Array(end-start).buffer;
  }})};
  let job={id:'',phase:'idle',offset:0,received:0,length:0,free_bytes:80*1024**3,available:true,busy:false,error:''};
- let writes=0,lost=false,controlPromise,context;const completed=[];
+ let writes=0,lost=false,controlPromise,context,pairRequests=0,statusRequests=0;const completed=[];
  const response=(status,json={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(json)),
   headers:{get:key=>Object.entries(headers).find(([name])=>name.toLowerCase()===key.toLowerCase())?.[1]??null}});
  const fetch=async(url,request={})=>{
-  if(url==='/api/v1/pair')return response(200,{session:'test-session'});
-  assert.equal(request.headers.Authorization,'Bearer test-session');
-  if(url==='/api/v1/status')return response(200,{uploads:true,transfer:job});
+  if(url==='/api/v1/pair'){
+   pairRequests++;
+   if(options.pairNetworkError)throw Error('offline');
+   return response(options.pairStatus||200,{session:options.invalidSession?'not-a-session':'a'.repeat(64)});
+  }
+  assert.equal(request.headers.Authorization,'Bearer '+'a'.repeat(64));
+  if(url==='/api/v1/status'){
+   statusRequests++;
+   if(options.initialStatusFailure&&statusRequests===1)return response(503,{error:'interrupted'});
+   return response(200,{uploads:true,transfer:job});
+  }
   if(url==='/api/v1/uploads'){
    if(options.collision&&writes===0&&element('name').value===name)return response(409,{error:'exists'});
    assert.equal(request.headers['Tus-Resumable'],'1.0.0');
@@ -90,9 +107,10 @@ async function browserScenario(options){
    });
   }
  }
- context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{toggle(){}}}},navigator:{language:'es'},localStorage:{getItem:()=> 'es',setItem(){}},
+ context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{toggle(){}}}},navigator:{language:'es'},
   location:{search:'?chunk='+(options.chunk||16)},URLSearchParams,TextEncoder,Uint8Array,Uint32Array,DataView,
   performance,XMLHttpRequest:XHR,fetch,btoa:value=>Buffer.from(value,'binary').toString('base64'),
+  localStorage:{getItem:()=>options.language||'es',setItem(){}},
   setTimeout:callback=>{queueMicrotask(callback);return 1;},setInterval:()=>1,clearInterval:()=>{},selected});
  vm.runInContext(script,context);
  if(options.resume||options.different){
@@ -100,7 +118,39 @@ async function browserScenario(options){
   const offset=4*1024**3+1048576;
   job={...job,id,name,fingerprint:options.different?'b'.repeat(64):signature,length,offset,received:offset,phase:'paused'};
  }
- element('code').value='1234';await callbacks.get('pair:submit')({preventDefault(){}});
+ element('code').value='1234';callbacks.get('code:input')({});await autoPairPromise;
+ if(options.initialStatusFailure){
+  assert.equal(element('pair').hidden,false,'status failure must not hide the code form');
+  assert.equal(element('connect').disabled,false,'status failure can be retried');
+  assert.equal(element('code').value,'1234','status failure preserves the code');
+  assert.equal(element('connection').textContent,'无法连接到主机。请确认设备在同一网络，并使用 Jadyx 显示的地址。');
+  await callbacks.get('pair:submit')({preventDefault(){}});
+  assert.equal(pairRequests,1,'retry uses the established session instead of consuming the code again');
+  assert.equal(statusRequests,2);
+  assert.equal(element('pair').hidden,true,'retry completes the pairing view transition');
+  assert.equal(element('code').value,'');
+  return;
+ }
+ if(options.pairStatus||options.pairNetworkError||options.invalidSession){
+  assert.equal(element('pair').hidden,false,'failed pairing keeps the code form visible');
+  assert.equal(element('connect').disabled,false,'failed pairing can be retried');
+  assert.equal(element('code').value,'1234','failed pairing preserves the entered code');
+  const expected=options.pairNetworkError
+   ?'无法连接到主机。请确认设备在同一网络，并使用 Jadyx 显示的地址。'
+   :options.pairStatus===401
+    ?'验证码错误或已过期。请在 Jadyx 中重新生成。'
+    :options.pairStatus===403
+     ?'页面地址与主机不匹配。请使用 Jadyx 显示的传送门地址。'
+     :options.pairStatus===429
+      ?'尝试次数过多，请等待一分钟。'
+      :options.pairStatus===503
+       ?'传送门暂不可用。请检查主机上的 Jadyx 是否仍在游戏库页面。'
+       :'传送门暂不可用。请检查主机上的 Jadyx 是否仍在游戏库页面。';
+  assert.equal(element('connection').textContent,expected);
+  return;
+ }
+ assert.equal(element('pair').hidden,true,'successful pairing leaves the code form');
+ assert.notEqual(element('connection').textContent,'','successful pairing shows confirmation');
  element('files').files=options.queue?[selected,{...selected,name:'second.nsp'}]:[selected];callbacks.get('files:change')();
  await callbacks.get('send:click')();
  if(controlPromise)await controlPromise;
@@ -115,7 +165,7 @@ async function browserScenario(options){
 
 async function systemScenario(kind,zip,language){
  const elements=new Map(),callbacks=new Map();
- const element=id=>{if(!elements.has(id))elements.set(id,{value:'',checked:false,textContent:'',files:[],hidden:false,disabled:false,setAttribute(){},
+ const element=id=>{if(!elements.has(id))elements.set(id,{value:'',checked:false,textContent:'',files:[],hidden:false,disabled:false,setAttribute(){},removeAttribute(){},
   addEventListener:(event,callback)=>callbacks.set(id+':'+event,callback)});return elements.get(id);};
  const id='b'.repeat(32),fileid='c'.repeat(32),length=1024*1024+1;
  const selected={name:zip?'source.zip':kind==='keys'?'prod.keys':'0'.repeat(32)+'.nca',size:length,lastModified:123,
@@ -123,8 +173,8 @@ async function systemScenario(kind,zip,language){
  let system={phase:'idle',available:true,busy:false},confirmations=0,writes=0;
  const response=(status,data={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(data)),headers:{get:k=>headers[k]??null}});
  const fetch=async(url,request={})=>{
-  if(url==='/api/v1/pair')return response(200,{session:'test-session'});
-  assert.equal(request.headers.Authorization,'Bearer test-session');
+  if(url==='/api/v1/pair')return response(200,{session:'a'.repeat(64)});
+  assert.equal(request.headers.Authorization,'Bearer '+'a'.repeat(64));
   if(url==='/api/v1/status')return response(200,{uploads:true,transfer:{available:false},system_supported:true,system});
   if(url==='/api/v1/system/jobs'){
    assert.deepEqual(JSON.parse(request.body),{kind,format:zip?'zip':'files',count:1});
@@ -177,8 +227,8 @@ async function libraryScenario(language){
  let removal={serial:0,game:'',content:'',phase:'',error:''},content={},data={},revision=1;
  const response=(status,data={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(data)),headers:{get:k=>headers[k]??null}});
  const fetch=async(url,request={})=>{
-  if(url==='/api/v1/pair')return response(200,{session:'test-session'});
-  assert.equal(request.headers.Authorization,'Bearer test-session');requests.push((request.method||'GET')+' '+url);
+  if(url==='/api/v1/pair')return response(200,{session:'a'.repeat(64)});
+  assert.equal(request.headers.Authorization,'Bearer '+'a'.repeat(64));requests.push((request.method||'GET')+' '+url);
   // The console runs a queued deletion before the next status read.
   if(url==='/api/v1/status'){
    if(removal.phase==='pending'){removal={...removal,phase:'complete'};
