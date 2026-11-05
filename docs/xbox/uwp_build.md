@@ -96,17 +96,17 @@ routes its JIT alloc/protect through `VirtualAllocFromApp`/`VirtualProtectFromAp
 ## GitHub Actions packaging
 
 A manual run of **CI** builds and tests the UWP app, then creates a signed test APPX.
-Pull-request CI runs do not package an APPX. To package artifacts from a previous
-successful CI run without recompiling, run **CI** with that run's ID in `source_run_id`.
-It reuses the unexpired `jadyx-build` and `spirv-to-dxil` artifacts, checks out their
-source commit, and signs/packages them. The source run must belong to the same
-repository and branch. If the project PFX secrets are configured, it uses the
-distribution certificate; otherwise this reuse-only path creates a one-off
-self-signed certificate for the package and removes its private key from the runner
-after signing. Install the included `.cer` to trust that package. A temporary signer
-cannot produce an in-place update over a package signed by the distribution
-certificate, and a later temporary run has a different signer. The resulting
-`jadyx-package` artifact is retained for 14 days.
+Pull-request CI runs do not package an APPX. A manual run with an empty
+`source_run_id` rebuilds the app and packages that build; providing the ID of a
+previous successful CI run instead reuses its unexpired `jadyx-build` and
+`spirv-to-dxil` artifacts without recompiling. Reuse checks that the source run
+belongs to the same repository and branch and checks out its exact source commit.
+Both manual paths use the distribution certificate when the project PFX secrets
+are configured; otherwise they create a one-off self-signed certificate and remove
+its private key from the runner after signing. Install the included `.cer` to trust
+that package. A temporary signer cannot produce an in-place update over a package
+signed by the distribution certificate, and a later temporary run has a different
+signer. The resulting `jadyx-package` artifact is retained for 14 days.
 
 ## Notes / known follow-ups
 

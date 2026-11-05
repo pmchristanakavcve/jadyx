@@ -10,7 +10,7 @@ on:
   workflow_call:
     inputs:
       package:
-        description: Also make the signed appx (needs the signing secrets)
+        description: Also make a signed APPX (uses the project or a temporary certificate)
         type: boolean
         default: false
       package_version:
@@ -276,21 +276,59 @@ jobs:
           PACKAGE_VERSION: ${{ inputs.package_version }}
         run: |
           $ErrorActionPreference = "Stop"
-          # Every package carries the project's certificate, so the console updates in place.
-          if (-not $env:JADYX_PFX_BASE64 -or -not $env:JADYX_PFX_PASSWORD) {
-              throw "The JADYX_PFX_BASE64 / JADYX_PFX_PASSWORD secrets are not set"
+          $hasPfx = -not [string]::IsNullOrWhiteSpace($env:JADYX_PFX_BASE64)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:JADYX_PFX_PASSWORD)
+          if ($hasPfx -ne $hasPassword) {
+              throw "Both JADYX_PFX_BASE64 and JADYX_PFX_PASSWORD must be set together"
           }
+          foreach ($file in @(
+              "build-uwp\bin\jadyx.exe",
+              "build-uwp\bin\jadyx.pdb",
+              "$env:RUNNER_TEMP\mesa\spirv_to_dxil.dll"
+          )) {
+              if (-not (Test-Path $file -PathType Leaf)) { throw "Required build artifact is missing: $file" }
+          }
+
           $pfx = Join-Path $env:RUNNER_TEMP "jadyx.pfx"
-          # A secret piped in from PowerShell can carry a BOM or line breaks; keep only base64.
-          $base64 = $env:JADYX_PFX_BASE64 -replace '[^A-Za-z0-9+/=]', ''
-          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($base64))
-          $params = @{
-              Release     = $true
-              PfxPath     = $pfx
-              SpirvToDxil = Join-Path $env:RUNNER_TEMP "mesa\spirv_to_dxil.dll"
+          $temporaryCert = $null
+          $signingKind = "project"
+          try {
+              if ($hasPfx) {
+                  # A secret piped in from PowerShell can carry a BOM or line breaks.
+                  $base64 = $env:JADYX_PFX_BASE64 -replace '[^A-Za-z0-9+/=]', ''
+                  [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($base64))
+              } else {
+                  $signingKind = "temporary-self-signed"
+                  $temporaryCert = New-SelfSignedCertificate `
+                      -Type CodeSigningCert `
+                      -Subject "CN=JadyxDev" `
+                      -FriendlyName "Jadyx temporary CI package signer" `
+                      -CertStoreLocation "Cert:\CurrentUser\My" `
+                      -KeyAlgorithm RSA `
+                      -KeyLength 2048 `
+                      -HashAlgorithm SHA256 `
+                      -KeyExportPolicy Exportable `
+                      -NotAfter (Get-Date).AddDays(30)
+                  $env:JADYX_PFX_PASSWORD = [Guid]::NewGuid().ToString("N")
+                  $securePassword = ConvertTo-SecureString $env:JADYX_PFX_PASSWORD -AsPlainText -Force
+                  Export-PfxCertificate -Cert $temporaryCert -FilePath $pfx -Password $securePassword | Out-Null
+              }
+              $params = @{
+                  Release     = $true
+                  PfxPath     = $pfx
+                  SpirvToDxil = Join-Path $env:RUNNER_TEMP "mesa\spirv_to_dxil.dll"
+              }
+              if ($env:PACKAGE_VERSION) { $params.Version = $env:PACKAGE_VERSION }
+              & tools\xbox\package-appx.ps1 @params
+          } finally {
+              Remove-Item $pfx -Force -ErrorAction SilentlyContinue
+              Remove-Item Env:JADYX_PFX_PASSWORD -ErrorAction SilentlyContinue
+              Remove-Item Env:JADYX_PFX_BASE64 -ErrorAction SilentlyContinue
+              if ($temporaryCert) {
+                  Remove-Item "Cert:\CurrentUser\My\$($temporaryCert.Thumbprint)" `
+                      -Force -ErrorAction SilentlyContinue
+              }
           }
-          if ($env:PACKAGE_VERSION) { $params.Version = $env:PACKAGE_VERSION }
-          try { & tools\xbox\package-appx.ps1 @params } finally { Remove-Item $pfx -Force }
 
           [xml]$mf = Get-Content build-uwp\package\layout\AppxManifest.xml -Raw
           $version = $mf.Package.Identity.Version
@@ -301,6 +339,7 @@ jobs:
           Compress-Archive build-uwp\bin\jadyx.pdb "out\Jadyx_${version}_symbols.zip"
           [ordered]@{
               version = $version
+              signing = $signingKind
               commit  = $env:GITHUB_SHA
               run     = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
           } | ConvertTo-Json | Set-Content -Encoding ascii out\build-info.json
