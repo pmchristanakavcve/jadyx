@@ -97,8 +97,15 @@ jobs:
           if (-not (Test-Path "C:\Program Files\NASM\nasm.exe")) { choco install nasm -y --no-progress }
           if (-not (Get-Command jom -ErrorAction SilentlyContinue)) { choco install jom -y --no-progress }
           if (-not (Test-Path "C:\Strawberry\perl\bin\perl.exe")) { throw "Strawberry Perl is missing from the runner" }
-          # The runner image pins the compiler: objects built by another one are not reused.
-          "image=$env:ImageOS-$env:ImageVersion" >> $env:GITHUB_OUTPUT
+          # Cache the OpenSSL build by the actual compiler version rather than the hosted VM image
+          # revision. GitHub refreshes that image independently of the installed toolchain.
+          $vsRoot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+              -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+              -property installationPath
+          $toolset = Get-ChildItem (Join-Path $vsRoot "VC\Tools\MSVC") -Directory |
+              Sort-Object { [version]$_.Name } | Select-Object -Last 1
+          $compiler = (Get-Item (Join-Path $toolset.FullName "bin\Hostx64\x64\cl.exe")).VersionInfo.FileVersion
+          "compiler=$compiler" >> $env:GITHUB_OUTPUT
 
       - name: Restore CPM sources
         id: cpm
@@ -151,7 +158,16 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: build-uwp/_deps/openssl-build
-          key: openssl-uwp-sccache-${{ steps.tools.outputs.image }}-${{ hashFiles('cpmfile.json', 'CMakePresets.json', 'CMakeLists.txt', 'CMakeModules/**') }}
+          key: openssl-uwp-sccache-${{ steps.tools.outputs.compiler }}-${{ hashFiles('cpmfile.json', 'CMakePresets.json', 'CMakeLists.txt', 'CMakeModules/**') }}
+
+      # One-time bridge from the old image-revision key. Both images shipped the exact same cl.exe
+      # version; after this cache is saved under the compiler-version key, this bridge can be removed.
+      - name: Restore previous OpenSSL cache key
+        if: steps.openssl.outputs.cache-hit != 'true' && startsWith(steps.tools.outputs.compiler, '19.51.36260')
+        uses: actions/cache/restore@v6
+        with:
+          path: build-uwp/_deps/openssl-build
+          key: openssl-uwp-sccache-win25-vs2026-20261103.298.1-${{ hashFiles('cpmfile.json', 'CMakePresets.json', 'CMakeLists.txt', 'CMakeModules/**') }}
 
       # Its post step read the stats after "Compiler cache stats" had stopped the server, so its
       # annotation always said 0 hits. That step writes the real ones to the run summary instead.
