@@ -64,12 +64,16 @@ int main() {
     check(!StepChoice<R>(regions.back(), regions, false));
     std::set<L> unique(SelectableGameLanguages().begin(), SelectableGameLanguages().end());
     check(unique.size() == SelectableGameLanguages().size());
+    check(SystemSettings{}.ui_language == L"zh-CN");
+    check(SystemPageDetail::StepUiLanguage(L"", true) == L"zh-CN");
+    check(SystemPageDetail::StepUiLanguage(L"zh-CN", false).value().empty());
 
     // User names: trimmed, control characters dropped, ten units, never a split surrogate pair.
     check(SanitizeUserName(L"  Ana  ") == L"Ana");
     check(SanitizeUserName(L"\tJulián\n") == L"Julián");
     check(SanitizeUserName(L"ABCDEFGHIJKLMN") == L"ABCDEFGHIJ");
-    check(SanitizeUserName(L"ABCDEFGHI😀") == L"ABCDEFGHI");
+    check(SanitizeUserName(L"ABCDEFGHI😀") ==
+          (sizeof(wchar_t) == 2 ? std::wstring{L"ABCDEFGHI"} : std::wstring{L"ABCDEFGHI😀"}));
     check(SanitizeUserName(L"   ").empty());
 
     // The page: values, changes and the name editor.
@@ -77,6 +81,8 @@ int main() {
     SystemPage page;
     page.open = true;
     page.locale = locale(L"es-CO", L"CO");
+    check(page.settings.ui_language == L"zh-CN");
+    page.settings.ui_language.clear(); // The existing automatic selector remains available.
     check(SystemRowValue(page, SystemPage::UserName) == L"Jadyx");
     check(SystemRowValue(page, SystemPage::InterfaceLanguage) == L"Automático · Español");
     check(SystemRowValue(page, SystemPage::GameLanguage) == L"Automático · Español (Latinoamérica)");
@@ -153,9 +159,12 @@ int main() {
     // Resolution: explicit choices win, the rest follow the system.
     SystemSettings settings;
     settings.region = R::Japan;
+    check(ResolveSystem(settings, {}).ui_language->tag == L"zh-CN");
+    settings.ui_language.clear();
     const auto resolved = ResolveSystem(settings, locale(L"es-ES"));
     check(resolved.ui_language->tag == L"es" && resolved.game_language == L::Spanish &&
           resolved.region == R::Japan);
+    check(ResolveSystem(settings, {}).ui_language->tag == L"zh-CN");
     settings.ui_language = L"en";
     check(ResolveSystem(settings, locale(L"es-ES")).ui_language->tag == L"en");
 

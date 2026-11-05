@@ -8,6 +8,7 @@
 // from the UI thread and runs the jobs on its storage worker; portal workers only read copies,
 // so no browser request touches the library state.
 
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
@@ -26,6 +27,8 @@ namespace Jadyx {
 
 /// The application of a content upload's "<kind>:<application hex>" tag; 0 when malformed.
 std::uint64_t ContentTagApplication(const std::string& tag);
+/// Application id in a validated save/cheat import tag; 0 if malformed.
+std::uint64_t DataTagApplication(const std::string& tag);
 
 class PortalLibrarySource {
 public:
@@ -44,6 +47,8 @@ public:
     /// `progress` also hears the bytes copied. Returns a portal error word.
     std::string Install(const std::filesystem::path& package, const std::string& tag, std::stop_token stop,
                         const Content::Progress& progress = {});
+    /// Imports a save or Atmosphère cheat upload. `tag` is validated again here.
+    std::string ImportData(const std::filesystem::path& file, const std::string& tag, std::stop_token stop);
     /// Carries out a deletion asked from the portal. Returns a portal error word.
     std::string Remove(const PortalRemoval& removal);
 
@@ -52,13 +57,21 @@ private:
         PortalGame info;
         std::string launch_path; ///< The first dump: the base for its updates/DLC and its cover.
         std::filesystem::path relative_path;
+        std::array<std::uint8_t, 8> build_id{};
         GameFiles files;
         bool operator==(const Game&) const = default;
     };
     std::optional<Game> Find(std::uint64_t application) const;
     std::optional<std::string> Cover(std::uint64_t application);
+    std::pair<std::vector<PortalSaveFolder>, std::vector<PortalSaveFile>> Saves(std::uint64_t application) const;
+    std::optional<PortalDownload> GameDownload(std::uint64_t application) const;
+    std::optional<PortalDownload> SaveDownload(std::uint64_t application, const std::string& file_id) const;
+    std::string ImportSave(const std::filesystem::path& file, std::uint64_t application,
+                           const std::string& folder_id, std::stop_token stop);
+    std::string ImportCheats(const std::filesystem::path& file, const Game& game, std::stop_token stop);
 
     std::filesystem::path root;
+    std::filesystem::path save_root, backup_root;
     const LibraryCache cache;
     std::atomic<std::uint64_t> installed{}, install_total{};
     mutable std::mutex mutex;

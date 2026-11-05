@@ -25,8 +25,7 @@ std::vector<fs::path> Children(const fs::path& folder) {
 
 /// The title's folders in every layout SaveDataFactory::GetFullPath writes (account, device,
 /// cache and temporary saves, old and future layouts), for every user.
-std::vector<fs::path> SaveFolders(std::uint64_t application) {
-    const auto saves = Common::FS::GetEdenPath(Common::FS::EdenPath::SaveDir);
+std::vector<fs::path> SaveFolders(const fs::path& saves, std::uint64_t application) {
     const auto title = fmt::format("{:016X}", application);
     std::vector<fs::path> result{saves / "user" / "save" / "device" / title, saves / "user" / "save" / "cache" / title};
     for (const auto& per_user : {saves / "user" / "save" / "0000000000000000", saves / "user" / "save" / "account",
@@ -51,6 +50,11 @@ bool RemoveDump(const fs::path& root, const fs::path& relative) {
     return true;
 }
 } // namespace
+
+std::vector<std::filesystem::path> GameSaveDirectories(const std::filesystem::path& save_root,
+                                                       std::uint64_t application) {
+    return SaveFolders(save_root, application);
+}
 
 namespace {
 /// The dumps of `application` that `chosen` picks; the rest are kept.
@@ -102,7 +106,8 @@ std::string RemoveGame(const fs::path& root, const GameFiles& game) {
     if (game.kept) return {};
     if (!Content::RemoveApplicationContent(game.application).empty()) return "content";
     bool saves = true;
-    for (const auto& folder : SaveFolders(game.application)) {
+    for (const auto& folder : GameSaveDirectories(
+             Common::FS::GetEdenPath(Common::FS::EdenPath::SaveDir), game.application)) {
         std::error_code ec;
         fs::remove_all(folder, ec);
         saves &= !ec;

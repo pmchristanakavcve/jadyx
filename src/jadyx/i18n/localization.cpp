@@ -51,6 +51,8 @@ const UiLanguage& NegotiateUiLanguage(std::span<const UiLanguage> available,
         for (const auto& language : available)
             if (!primary.empty() && SameTag(PrimarySubtag(language.tag), primary)) return language;
     }
+    for (const auto& language : available)
+        if (SameTag(language.tag, L"zh-CN")) return language;
     return available.front();
 }
 
@@ -60,7 +62,10 @@ void SetUiLanguage(const UiLanguage& language) {
 
 const UiLanguage& CurrentUiLanguage() {
     const auto* language = current.load(std::memory_order_acquire);
-    return language ? *language : UiLanguages().front();
+    if (language) return *language;
+    const auto available = UiLanguages();
+    if (const auto* chinese = Find(available, L"zh-CN")) return *chinese;
+    return available.front();
 }
 
 std::wstring_view Tr(Text id) {

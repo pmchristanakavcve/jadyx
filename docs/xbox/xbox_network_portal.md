@@ -523,3 +523,40 @@ admisión kind/juego, tag al instalador, cola de eliminación, exclusión de sub
 visible); test de página network-portal-page.cjs (es/en/pt-BR, mock HTTP, ejecutado con
 Electron de VS Code en modo node); UWP compila/enlaza. Pendiente: gate en Series con
 update/DLC reales y eliminación desde ambos lados.
+
+## Chino predeterminado y gestión de partidas desde el portal — trabajo local
+
+La interfaz nativa incorpora el catálogo Simplified Chinese (741 textos con sus
+placeholders), lo registra como `zh-CN` y lo usa como idioma inicial en instalaciones
+nuevas. Se mantienen inglés, español y portugués brasileño, y la selección manual.
+El portal web también abre en chino simplificado; su selector conserva el idioma
+elegido en `localStorage`.
+
+En Biblioteca, cada juego permite:
+- Ver y subir updates/DLC con el flujo existente.
+- Enumerar carpetas y archivos de guardado sin enviar rutas locales al navegador;
+  importar un ZIP o un archivo reconocido (incluidos `GameData0`, `AutoSave`,
+  `CRYSTAR*.dat`, DAT/SAV/BIN/DB). Los reemplazos se respaldan antes de publicar;
+  la importación ZIP aplana rutas internas y rechaza rutas inseguras y nombres
+  duplicados.
+- Exportar cada guardado y descargar el NSP/XCI/NRO original retenido en la
+  biblioteca. Descargas grandes usan tickets aleatorios de corta duración y
+  streaming, no un Blob en memoria ni una ruta elegida por el navegador.
+- Importar cheats Atmosphère TXT o un ZIP con TXT para el Build ID actual. Se
+  escriben en un directorio separado de importación y quedan desactivados.
+
+La subida de datos usa `tus /api/v1/data/uploads`, con tags `save:<app-id>:<folder-id>`
+o `cheat:<app-id>`; el servidor vuelve a validar juego, destino y formato antes de
+importar. Los archivos de guardado sustituidos se conservan en
+`LocalState/jadyx/save-backups/<app-id>/<id-aleatorio>/`; una recuperación automática
+fallida se informa explícitamente y requiere no iniciar el juego hasta revisar la copia.
+No se aceptan rutas de destino del navegador.
+
+Validación local: sintaxis JS y `git diff --check` pasan; el mock de página cubre
+idiomas, updates, importación de guardado/cheats y tickets de exportación/descarga.
+El script existente `network-portal-page.cjs` se detiene antes de esas pruebas por
+una discrepancia previa entre `network_portal_logo.h` y el PNG empaquetado; ejecutado
+sin esa aserción, el resto de sus escenarios pasa. El harness TCP nativo se amplió
+para pairing, tags de guardado, rechazos, vistas y descargas con ticket. Aún no se ha
+ejecutado el harness C++ ni el build UWP en este entorno Linux; tampoco hay gate de
+instalación o importación real en Series. Sin commit ni push.

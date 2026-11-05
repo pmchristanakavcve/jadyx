@@ -12,9 +12,10 @@ int main() {
     using namespace Jadyx::I18n;
     auto check = [](bool ok) { if (!ok) std::abort(); };
     const auto languages = UiLanguages();
-    check(languages.size() >= 2 && languages.front().tag == L"en");
+    check(languages.size() == 4 && languages.front().tag == L"en");
+    check(FindUiLanguage(L"zh-CN") && FindUiLanguage(L"zh-CN")->native_name == L"简体中文");
 
-    // Negotiation: exact, shortened, case/underscore-insensitive, in preference order, English last.
+    // Negotiation: exact, shortened, case/underscore-insensitive, in preference order.
     auto negotiate = [&](std::vector<std::wstring> preferences) {
         return NegotiateUiLanguage(languages, preferences).tag;
     };
@@ -25,8 +26,10 @@ int main() {
     check(negotiate({L"pt-BR"}) == L"pt-BR");
     check(negotiate({L"pt"}) == L"pt-BR");
     check(negotiate({L"pt-PT", L"es-ES"}) == L"pt-BR"); // Another variant beats the next preference.
-    check(negotiate({L"de-DE"}) == L"en");
-    check(negotiate({}) == L"en");
+    check(negotiate({L"de-DE"}) == L"zh-CN");
+    check(negotiate({}) == L"zh-CN");
+    check(CurrentUiLanguage().tag == L"zh-CN");
+    check(Tr(Text::Play) == L"开始游戏");
 
     // Every catalog is complete (MakeCatalog enforces it at compile time; this guards the registry).
     for (const auto& language : languages)
@@ -74,5 +77,12 @@ int main() {
     check(Plural(Text::GamesCountOne, Text::GamesCountOther, 2) == L"2 games");
     check(ToUtf8(L"Ñ€😀") == "\xC3\x91\xE2\x82\xAC\xF0\x9F\x98\x80");
 
-    std::puts("localization: negotiation, catalogs, plurals, placeholders and UTF-8 PASS");
+    SetUiLanguage(*FindUiLanguage(L"zh-CN"));
+    check(Tr(Text::Play) == L"开始游戏");
+    check(Tr(Text::SystemTitle) == L"系统");
+    check(Plural(Text::GamesCountOne, Text::GamesCountOther, 0) == L"0 个游戏");
+    check(Format(Text::UpdaterVersions, {L"1.0", L"2.0"}) == L"当前版本 1.0  →  新版本 2.0");
+    check(Format(Text::PlayedOnDate, {L"5", L"8", L"2026"}) == L"2026年8月5日");
+
+    std::puts("localization: negotiation, zh-CN catalog, placeholders, plurals and UTF-8 PASS");
 }

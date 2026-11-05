@@ -40,7 +40,8 @@ public:
     static constexpr std::uint64_t MaxLength = 1ULL << 40;
     static constexpr std::uint64_t MaxChunk = 64ULL << 20;
     explicit NspUpload(std::filesystem::path games, bool system_files = false,
-                       std::filesystem::path temporary = {}, bool consume = false, bool developer = false);
+                       std::filesystem::path temporary = {}, bool consume = false, bool developer = false,
+                       bool portal_data = false);
     ~NspUpload();
     UploadSnapshot Snapshot() const;
     bool SetAvailable(bool enabled); ///< false refuses new input; never cancels an active file.

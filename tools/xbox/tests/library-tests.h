@@ -13,15 +13,27 @@ void LibraryTests(int port) {
     const auto fixture=parent/("library-"+std::to_string(GetCurrentProcessId()));
     Check(fixture.parent_path()==parent && !fs::exists(fixture),"isolated library fixture path");
     fs::create_directories(fixture/"games");
+    const auto game_file=fixture/"games"/"game.nsp",save_file=fixture/"save.dat";
+    { std::ofstream out{game_file,std::ios::binary}; out<<"game"; }
+    { std::ofstream out{save_file,std::ios::binary}; out<<"save"; }
     constexpr std::uint64_t application=0x0100000000010000ULL;
-    const std::string game="0100000000010000",item(64,'d');
+    const std::string game="0100000000010000",item(64,'d'),folder(64,'a'),save_id(64,'b');
     std::atomic<std::uint64_t> covers{};
     {
     Jadyx::NetworkPortal portal{fixture/"games"};
     portal.SetLibrary({
-        .games=[] { return std::pair{std::uint64_t{7},std::vector<Jadyx::PortalGame>{{.program_id=application,.name="Game",.version="1.0.0",.removable=true}}}; },
+        .games=[] { return std::pair{std::uint64_t{7},std::vector<Jadyx::PortalGame>{{.program_id=application,.name="Game",.version="1.0.0",.removable=true,.downloadable=true}}}; },
         .cover=[&](std::uint64_t id) { ++covers; return id==application ? std::optional<std::string>{"jpeg"} : std::nullopt; },
         .contents=[&](std::uint64_t) { return std::vector<Jadyx::PortalContent>{{.id=item,.kind="update",.name="Update",.version="1.0.1",.bytes=5,.internal=true}}; },
+        .saves=[&](std::uint64_t) { return std::pair{
+            std::vector<Jadyx::PortalSaveFolder>{{.id=folder,.label="1"}},
+            std::vector<Jadyx::PortalSaveFile>{{.id=save_id,.folder=folder,.name="save.dat",.bytes=4,.recognized=true}}}; },
+        .game_download=[&](std::uint64_t id) -> std::optional<Jadyx::PortalDownload> {
+            return id==application?std::optional<Jadyx::PortalDownload>{{.path=game_file,.filename="game.nsp",.bytes=4}}:std::nullopt;
+        },
+        .save_download=[&](std::uint64_t id,const std::string& file_id) -> std::optional<Jadyx::PortalDownload> {
+            return id==application&&file_id==save_id?std::optional<Jadyx::PortalDownload>{{.path=save_file,.filename="save.dat",.bytes=4}}:std::nullopt;
+        },
         .progress=[] { return std::pair{std::uint64_t{3},std::uint64_t{9}}; },
     });
     Check(portal.Start("127.0.0.1",static_cast<unsigned short>(port)),"library listener");
@@ -39,13 +51,27 @@ void LibraryTests(int port) {
     Check(Status(library)==200,"library listing");
     const auto listed=Json::parse(library->body);
     Check(listed.at("revision")==7 && listed.at("games").size()==1 && listed.at("games")[0].at("id")==game &&
-          listed.at("games")[0].at("removable")==true,"library JSON carries id, revision and removable");
+          listed.at("games")[0].at("removable")==true && listed.at("games")[0].at("downloadable")==true,
+          "library JSON carries id, revision, removable and downloadable");
     const auto cover=client.Get("/api/v1/library/"+game+"/cover",headers);
     Check(Status(cover)==200 && cover->body=="jpeg" && cover->get_header_value("Content-Type")=="image/jpeg","cover bytes");
     Check(Status(client.Get("/api/v1/library/0100000000020000/cover",headers))==404,"unknown cover");
     Check(Status(client.Get("/api/v1/library/0100000000010000X/cover",headers))==404 && covers==2,"malformed id never reaches the view");
     const auto contents=client.Get("/api/v1/library/"+game+"/content",headers);
     Check(Status(contents)==200 && Json::parse(contents->body).at("contents")[0].at("id")==item,"content listing");
+    const auto saves=client.Get("/api/v1/library/"+game+"/saves",headers);
+    Check(Status(saves)==200 && Json::parse(saves->body).at("folders")[0].at("id")==folder &&
+          Json::parse(saves->body).at("files")[0].at("recognized")==true,"save folders and recognized files");
+    const auto game_ticket=client.Post("/api/v1/library/"+game+"/download",headers);
+    Check(Status(game_ticket)==200,"original game download ticket");
+    const auto game_path=Json::parse(game_ticket->body).at("download").get<std::string>();
+    const auto game_download=client.Get(game_path);
+    Check(Status(game_download)==200&&game_download->body=="game","ticket streams original game bytes without a browser path");
+    const auto save_ticket=client.Post("/api/v1/library/"+game+"/saves/"+save_id+"/download",headers);
+    Check(Status(save_ticket)==200,"save export ticket");
+    const auto save_path=Json::parse(save_ticket->body).at("download").get<std::string>();
+    const auto save_download=client.Get(save_path);
+    Check(Status(save_download)==200&&save_download->body=="save","ticket streams save bytes");
     Check(Json::parse(client.Get("/api/v1/status",headers)->body).at("install")==Json{{"done",3},{"total",9}},"install progress in status");
 
     // A content upload names its kind and game; both are checked before anything is created.
@@ -73,6 +99,41 @@ void LibraryTests(int port) {
     }).empty() && seen=="update:"+game,"the installer receives the validated tag");
     Check(portal.Status().content.phase=="complete","content consumed");
 
+    // Data uploads use a distinct tus record and never accept a browser-supplied path.
+    auto data_headers=headers;
+    data_headers.emplace("Upload-Length","4");
+    data_headers.emplace("Upload-Metadata","filename "+httplib::detail::base64_encode("GameData0.dat")+
+        ",fingerprint "+httplib::detail::base64_encode(std::string(64,'c'))+
+        ",kind "+httplib::detail::base64_encode("save")+
+        ",application "+httplib::detail::base64_encode(game)+
+        ",folder "+httplib::detail::base64_encode(folder));
+    Check(Status(client.Post("/api/v1/data/uploads"))==401,"save upload requires the paired session");
+    Check(Status(client.Post("/api/v1/data/uploads",data_headers))==201,"save upload created");
+    const auto data_id=portal.Status().data.id;
+    const auto data_url="/api/v1/data/uploads/"+data_id;
+    auto data_patch=data_headers;data_patch.emplace("Upload-Offset","0");
+    Check(Status(client.Patch(data_url,data_patch,"save","application/offset+octet-stream"))==204,"save upload bytes");
+    Check(Status(client.Post(data_url+"/finish",headers))==204,"save upload ready");
+    std::string data_tag;
+    Check(portal.FinalizeData([&](const fs::path& path,const std::string& tag,std::stop_token) {
+        data_tag=tag;return fs::file_size(path)==4?std::string{}:std::string{"file"};
+    }).empty()&&data_tag=="save:"+game+":"+folder&&portal.Status().data.phase=="complete",
+    "save import receives only validated game and folder ids");
+    auto invalid_data=data_headers;
+    invalid_data["Upload-Metadata"]="filename "+httplib::detail::base64_encode("save.dat")+
+        ",fingerprint "+httplib::detail::base64_encode(std::string(64,'c'))+
+        ",kind "+httplib::detail::base64_encode("save")+
+        ",application "+httplib::detail::base64_encode(game)+
+        ",folder "+httplib::detail::base64_encode("../");
+    Check(Status(client.Post("/api/v1/data/uploads",invalid_data))==400,"save upload rejects malformed folder ids");
+    auto unknown_data=data_headers;
+    unknown_data["Upload-Metadata"]="filename "+httplib::detail::base64_encode("GameData0.dat")+
+        ",fingerprint "+httplib::detail::base64_encode(std::string(64,'c'))+
+        ",kind "+httplib::detail::base64_encode("save")+
+        ",application "+httplib::detail::base64_encode(std::string("0100000000020000"))+
+        ",folder "+httplib::detail::base64_encode(folder);
+    Check(Status(client.Post("/api/v1/data/uploads",unknown_data))==404,"save upload cannot target an unknown game");
+
     // Deletions queue one job; uploads stay closed from the request until the job has run.
     Check(Status(client.Delete("/api/v1/library/0100000000020000",headers))==404,"unknown game cannot be deleted");
     Check(Status(client.Delete("/api/v1/library/"+game+"/content/abc",headers))==404,"malformed content id");
@@ -98,5 +159,5 @@ void LibraryTests(int port) {
     portal.Stop();
     }
     std::error_code ignored;fs::remove_all(fixture,ignored);
-    std::puts("PASS: library listing/cover/content views, update upload kind+game admission, queued deletions and upload exclusion (synthetic view)");
+    std::puts("PASS: library listing/cover/save views, ticketed game/save downloads, update/save uploads, queued deletions and upload exclusion (synthetic view)");
 }

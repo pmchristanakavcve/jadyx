@@ -63,14 +63,20 @@ fs::path Filename(const std::string& name) {
     return fs::path{std::u8string{name.begin(), name.end()}};
 }
 
-bool ValidName(const std::string& name, bool system_files = false) {
+bool ValidName(const std::string& name, bool system_files = false, bool portal_data = false) {
     if (name.size() < 5 || name.size() > 200 || name.back() == ' ' || name.back() == '.') return false;
     for (const unsigned char c : name)
         if (c < 32 || std::string_view{"/\\:<>\"|?*"}.find(static_cast<char>(c)) != std::string_view::npos) return false;
     if (name.find("..") != std::string::npos) return false;
     auto lower = name;
     std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    if (system_files ? !(lower.ends_with(".zip") || lower.ends_with(".nca") || lower=="prod.keys" || lower=="title.keys") :
+    const bool named_save = lower.starts_with("gamedata0") || lower.starts_with("autosave") ||
+                            (lower.starts_with("crystar") && lower.ends_with(".dat"));
+    if (portal_data ? !(lower.ends_with(".zip") || lower.ends_with(".txt") || lower.ends_with(".dat") ||
+                        lower.ends_with(".sav") || lower.ends_with(".save") || lower.ends_with(".bin") ||
+                        lower.ends_with(".db") || lower.ends_with(".sqlite") || lower.ends_with(".json") ||
+                        lower.ends_with(".xml") || lower.ends_with(".ini") || named_save) :
+        system_files ? !(lower.ends_with(".zip") || lower.ends_with(".nca") || lower=="prod.keys" || lower=="title.keys") :
                        !(lower.ends_with(".nsp") || lower.ends_with(".xci") || lower.ends_with(".nro"))) return false;
     const auto stem = lower.substr(0, lower.find('.'));
     if (stem == "con" || stem == "prn" || stem == "aux" || stem == "nul" ||
@@ -79,7 +85,7 @@ bool ValidName(const std::string& name, bool system_files = false) {
 }
 
 bool ValidTag(const std::string& tag) {
-    return tag.size() <= 64 && tag.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyz:") == std::string::npos;
+    return tag.size() <= 128 && tag.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyz:") == std::string::npos;
 }
 
 bool Hex(const std::string& value, std::size_t size) {
@@ -110,12 +116,13 @@ struct NspUpload::Impl {
     std::uint64_t generation{}, file_id{};
     DWORD volume{};
     std::stop_source cancellation;
-    bool system_files{}, consume{}, developer{};
+    bool system_files{}, consume{}, developer{}, portal_data{};
 
-    explicit Impl(fs::path games_, bool system_files_, fs::path temporary, bool consume_, bool developer_) :
+    explicit Impl(fs::path games_, bool system_files_, fs::path temporary, bool consume_, bool developer_, bool portal_data_) :
         games{std::move(games_)},
         folder{temporary.empty() ? games.parent_path() / "jadyx/transfers/nsp" : std::move(temporary)},
-        payload{folder / "payload.part"}, system_files{system_files_}, consume{consume_}, developer{developer_} {
+        payload{folder / "payload.part"}, system_files{system_files_}, consume{consume_}, developer{developer_},
+        portal_data{portal_data_} {
         fs::create_directories(games);
         fs::create_directories(folder);
         Recover();
@@ -160,7 +167,7 @@ struct NspUpload::Impl {
                 if ((destination != "internal" && !on_developer) || (on_developer && !developer)) continue;
                 const auto target_games = GamesFor(on_developer);
                 const auto data_path = PayloadFor(on_developer);
-                if (json.at("version") != 1 || next <= generation || !ValidName(filename,system_files) || !ValidTag(tag) ||
+                if (json.at("version") != 1 || next <= generation || !ValidName(filename,system_files,portal_data) || !ValidTag(tag) ||
                     !Hex(id, 32) || !Hex(fingerprint, 64) || !length || length > MaxLength || offset > length) continue;
                 const auto identity = json.at("file_id").get<std::uint64_t>();
                 const auto serial = json.at("volume").get<DWORD>();
@@ -209,8 +216,8 @@ struct NspUpload::Impl {
     }
 };
 
-NspUpload::NspUpload(fs::path games, bool system_files, fs::path temporary, bool consume, bool developer) :
-    impl{std::make_unique<Impl>(std::move(games),system_files,std::move(temporary),consume,developer)} {}
+NspUpload::NspUpload(fs::path games, bool system_files, fs::path temporary, bool consume, bool developer, bool portal_data) :
+    impl{std::make_unique<Impl>(std::move(games),system_files,std::move(temporary),consume,developer,portal_data)} {}
 NspUpload::~NspUpload() { Cancel(); }
 
 UploadSnapshot NspUpload::Snapshot() const {
@@ -254,7 +261,7 @@ void NspUpload::Resume() {
 
 UploadResult NspUpload::Create(std::string name, std::string fingerprint, std::uint64_t length, std::string tag,
                               bool developer) {
-    if (!ValidName(name,impl->system_files) || !Hex(fingerprint, 64) || !ValidTag(tag) || !length || length > MaxLength) return {400, "file"};
+    if (!ValidName(name,impl->system_files,impl->portal_data) || !Hex(fingerprint, 64) || !ValidTag(tag) || !length || length > MaxLength) return {400, "file"};
     if (developer && !impl->developer) return {400, "destination"};
     std::unique_lock operation{impl->operation, std::try_to_lock};
     if (!operation.owns_lock()) return {409, "busy"};
@@ -391,7 +398,7 @@ UploadResult NspUpload::Ready(const std::string& id) {
     return {};
 }
 UploadResult NspUpload::Rename(const std::string& id, std::string name) {
-    if (!ValidName(name,impl->system_files)) return {400, "file"};
+    if (!ValidName(name,impl->system_files,impl->portal_data)) return {400, "file"};
     std::unique_lock operation{impl->operation, std::try_to_lock};
     if (!operation.owns_lock()) return {409, "busy"};
     std::lock_guard lock{impl->mutex};

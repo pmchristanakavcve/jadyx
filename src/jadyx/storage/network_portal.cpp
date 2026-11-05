@@ -283,7 +283,6 @@ int BindError(const std::string& ipv4, unsigned short port) {
     ::closesocket(socket);
     return error;
 }
-
 PortalError BindFailure(int error) {
     switch (error) {
     case WSAEADDRINUSE: return PortalError::PortInUse;
@@ -427,6 +426,11 @@ std::string PortalAdapterReport() {
 }
 
 struct NetworkPortal::Impl {
+    struct LibraryTicket {
+        std::uint64_t application{};
+        PortalDownload file;
+        Clock::time_point expires{};
+    };
     std::unique_ptr<LogExport> logs;
     std::string logs_ticket;
     std::uint64_t logs_ticket_run{};
@@ -450,8 +454,10 @@ struct NetworkPortal::Impl {
     std::jthread listener;
     std::unique_ptr<NspUpload> upload;
     std::unique_ptr<NspUpload> content; ///< Update/DLC packages, consumed into internal storage.
+    std::unique_ptr<NspUpload> data; ///< Save/cheat files, consumed after validated publication.
     std::unique_ptr<SystemUpload> system;
     PortalLibrary library;
+    std::map<std::string, LibraryTicket> library_tickets;
     bool storage_failed{};
 
     /// Excludes both resumable uploads, or neither. Caller holds `admission`.
@@ -461,11 +467,17 @@ struct NetworkPortal::Impl {
             if (upload) upload->SetAvailable(imports_available);
             return false;
         }
+        if (data && !data->BlockForLocalOperation()) {
+            if (upload) upload->SetAvailable(imports_available);
+            if (content) content->SetAvailable(imports_available);
+            return false;
+        }
         return true;
     }
     void RestoreUploads() {
         if (upload) upload->SetAvailable(imports_available);
         if (content) content->SetAvailable(imports_available);
+        if (data) data->SetAvailable(imports_available);
     }
     bool RemovalActive() const {
         std::lock_guard lock{mutex};
@@ -476,12 +488,14 @@ struct NetworkPortal::Impl {
         if (logs) logs->Stop();
         if (upload) upload->Cancel();
         if (content) content->Cancel();
+        if (data) data->Cancel();
         if (system) system->Cancel();
         {
             std::lock_guard lock{mutex};
             status.running = status.paired = false;
             update_ticket.clear(); ticket_package.reset();
             logs_ticket.clear();
+            library_tickets.clear();
             status.code.clear(); status.url.clear(); session.clear();
         }
         if (server) { server->stop(); server->CancelClients(); server->decommission(); }
@@ -489,6 +503,7 @@ struct NetworkPortal::Impl {
         server.reset();
         if (upload) upload->Suspend();
         if (content) content->Suspend();
+        if (data) data->Suspend();
         if (system) system->Suspend();
     }
 
@@ -548,6 +563,14 @@ struct NetworkPortal::Impl {
                 Clock::now() < logs_ticket_until &&
                 EqualSecret(request.get_param_value("ticket"), logs_ticket))
                 return httplib::Server::HandlerResponse::Unhandled;
+            if ((request.method == "GET" || request.method == "HEAD") &&
+                request.path == "/api/v1/library/download" &&
+                request.get_param_value_count("ticket") == 1) {
+                const auto found = library_tickets.find(request.get_param_value("ticket"));
+                if (found != library_tickets.end() && Clock::now() < found->second.expires &&
+                    EqualSecret(request.get_param_value("ticket"), found->first))
+                    return httplib::Server::HandlerResponse::Unhandled;
+            }
             if (request.get_header_value_count("Authorization") != 1 ||
                 !EqualSecret(request.get_header_value("Authorization"), "Bearer " + session) || session.empty()) {
                 Reply(response, 401, {{"error", "session"}});
@@ -582,6 +605,7 @@ struct NetworkPortal::Impl {
             session = std::move(next);
             logs_ticket.clear();
             update_ticket.clear(); ticket_package.reset();
+            library_tickets.clear();
             status.paired = true;
             expires = now;
             Reply(response, 200, {{"session", session}});
@@ -590,6 +614,7 @@ struct NetworkPortal::Impl {
             Reply(response, 200, {{"running", true}, {"stage", upload ? "nsp" : "connection-test"},
                 {"uploads", bool(upload)}, {"transfer", upload ? UploadJson(upload->Snapshot()) : Json::object()},
                 {"library", bool(library.games)}, {"content", content ? UploadJson(content->Snapshot()) : Json::object()},
+                {"data", data ? UploadJson(data->Snapshot()) : Json::object()},
                 {"install", InstallJson()},
                 {"removal", [this] { std::lock_guard lock{mutex}; return RemovalJson(status.removal); }()},
                 {"system_supported",system_supported},{"system",system ? SystemJson(system->Snapshot()) : Json::object()},
@@ -649,6 +674,7 @@ struct NetworkPortal::Impl {
         });
         UploadRoutes("/api/v1/uploads", upload.get(), content.get());
         UploadRoutes("/api/v1/content/uploads", content.get(), upload.get());
+        UploadRoutes("/api/v1/data/uploads", data.get(), upload.get());
         LibraryRoutes();
         SystemRoutes();
         LogRoutes();
@@ -782,7 +808,8 @@ struct NetworkPortal::Impl {
                 auto list = Json::array();
                 for (const auto& game : games)
                     list.push_back({{"id", Hex16(game.program_id)}, {"name", game.name},
-                        {"developer", game.developer}, {"version", game.version}, {"removable", game.removable}});
+                        {"developer", game.developer}, {"version", game.version}, {"removable", game.removable},
+                        {"downloadable", game.downloadable}});
                 Reply(response, 200, {{"revision", revision}, {"games", std::move(list)}});
             } catch (...) { Reply(response, 500, {{"error", "library"}}); }
         });
@@ -806,11 +833,128 @@ struct NetworkPortal::Impl {
                 Reply(response, 200, {{"contents", std::move(list)}});
             } catch (...) { Reply(response, 500, {{"error", "library"}}); }
         });
+        server->Get("/api/v1/library/([0-9a-f]{16})/saves", [this](const auto& request, auto& response) {
+            std::uint64_t id{};
+            if (!library.saves || !ParseHex16(request.matches[1].str(), id) || !KnownGame(id)) {
+                Reply(response, 404, {{"error", "game"}}); return;
+            }
+            try {
+                const auto [folders, files] = library.saves(id);
+                auto folder_list = Json::array(), file_list = Json::array();
+                for (const auto& folder : folders)
+                    folder_list.push_back({{"id", folder.id}, {"label", folder.label}});
+                for (const auto& file : files)
+                    file_list.push_back({{"id", file.id}, {"folder", file.folder}, {"name", file.name},
+                        {"bytes", file.bytes}, {"recognized", file.recognized}});
+                Reply(response, 200, {{"folders", std::move(folder_list)}, {"files", std::move(file_list)}});
+            } catch (...) { Reply(response, 500, {{"error", "saves"}}); }
+        });
+        server->Post("/api/v1/library/([0-9a-f]{16})/download", [this](const auto& request, auto& response) {
+            std::uint64_t id{};
+            if (!library.game_download || !ParseHex16(request.matches[1].str(), id) || !KnownGame(id)) {
+                Reply(response, 404, {{"error", "game"}}); return;
+            }
+            try {
+                const auto file = library.game_download(id);
+                if (!file) { Reply(response, 404, {{"error", "file"}}); return; }
+                CreateLibraryTicket(id, *file, response);
+            } catch (...) { Reply(response, 500, {{"error", "file"}}); }
+        });
+        server->Post("/api/v1/library/([0-9a-f]{16})/saves/([0-9a-f]{64})/download",
+            [this](const auto& request, auto& response) {
+                std::uint64_t id{};
+                if (!library.save_download || !ParseHex16(request.matches[1].str(), id) || !KnownGame(id)) {
+                    Reply(response, 404, {{"error", "game"}}); return;
+                }
+                try {
+                    const auto file = library.save_download(id, request.matches[2].str());
+                    if (!file) { Reply(response, 404, {{"error", "file"}}); return; }
+                    CreateLibraryTicket(id, *file, response);
+                } catch (...) { Reply(response, 500, {{"error", "file"}}); }
+            });
+        DownloadRoutes();
         server->Delete("/api/v1/library/([0-9a-f]{16})", [this](const auto& request, auto& response) {
             RequestRemoval(request.matches[1].str(), {}, response);
         });
         server->Delete("/api/v1/library/([0-9a-f]{16})/content/([0-9a-f]{64})", [this](const auto& request, auto& response) {
             RequestRemoval(request.matches[1].str(), request.matches[2].str(), response);
+        });
+    }
+
+    void CreateLibraryTicket(std::uint64_t application, const PortalDownload& file, httplib::Response& response) {
+        if (file.path.empty() || file.filename.empty() || file.bytes == 0) {
+            Reply(response, 404, {{"error", "file"}}); return;
+        }
+        const auto ticket = RandomSession();
+        if (ticket.empty()) { Reply(response, 503, {{"error", "random"}}); return; }
+        std::lock_guard lock{mutex};
+        const auto now = Clock::now();
+        std::erase_if(library_tickets, [now](const auto& item) { return item.second.expires <= now; });
+        while (library_tickets.size() >= 32) library_tickets.erase(library_tickets.begin());
+        library_tickets.emplace(ticket, LibraryTicket{.application = application, .file = file,
+            .expires = now + std::chrono::minutes{30}});
+        Reply(response, 200, {{"download", "/api/v1/library/download?ticket=" + ticket},
+            {"filename", file.filename}, {"size", file.bytes}});
+    }
+
+    void DownloadRoutes() {
+        server->Get("/api/v1/library/download", [this](const auto& request, auto& response) {
+            LibraryTicket ticket;
+            {
+                std::lock_guard lock{mutex};
+                if (request.get_param_value_count("ticket") != 1) {
+                    Reply(response, 401, {{"error", "ticket"}}); return;
+                }
+                const auto found = library_tickets.find(request.get_param_value("ticket"));
+                if (found == library_tickets.end() || found->second.expires <= Clock::now() ||
+                    !EqualSecret(request.get_param_value("ticket"), found->first)) {
+                    Reply(response, 401, {{"error", "ticket"}}); return;
+                }
+                ticket = found->second;
+            }
+            struct Reader {
+                HANDLE handle{INVALID_HANDLE_VALUE};
+                ~Reader() { if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle); }
+                bool Send(std::size_t offset, std::size_t length, httplib::DataSink& sink) {
+                    std::array<char, 1U << 20> bytes{};
+                    while (length) {
+                        const auto take = static_cast<DWORD>(std::min(length, bytes.size()));
+                        OVERLAPPED at{};
+                        at.Offset = static_cast<DWORD>(offset);
+                        at.OffsetHigh = static_cast<DWORD>(static_cast<std::uint64_t>(offset) >> 32);
+                        DWORD read{};
+                        if (!ReadFile(handle, bytes.data(), take, &read, &at) || read != take ||
+                            !sink.write(bytes.data(), take)) return false;
+                        offset += take;
+                        length -= take;
+                    }
+                    return true;
+                }
+            };
+            const auto reader = std::make_shared<Reader>();
+            reader->handle = CreateFile2FromAppW(ticket.file.path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                                   OPEN_EXISTING, nullptr);
+            if (reader->handle == INVALID_HANDLE_VALUE) {
+                Reply(response, 404, {{"error", "file"}}); return;
+            }
+            LARGE_INTEGER length{};
+            if (!GetFileSizeEx(reader->handle, &length) || length.QuadPart < 0 ||
+                static_cast<std::uint64_t>(length.QuadPart) != ticket.file.bytes) {
+                Reply(response, 409, {{"error", "changed"}}); return;
+            }
+            constexpr char safe[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
+            std::string filename;
+            for (const unsigned char c : ticket.file.filename)
+                filename += std::string_view{safe}.find(static_cast<char>(c)) == std::string_view::npos ?
+                    '_' : static_cast<char>(c);
+            if (filename.empty()) filename = "download";
+            response.set_header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            response.set_header("Accept-Ranges", "bytes");
+            response.set_content_provider(static_cast<std::size_t>(ticket.file.bytes),
+                ticket.file.content_type.empty() ? "application/octet-stream" : ticket.file.content_type,
+                [reader](std::size_t offset, std::size_t length, httplib::DataSink& sink) {
+                    return reader->Send(offset, length, sink);
+                });
         });
     }
 
@@ -824,6 +968,9 @@ struct NetworkPortal::Impl {
         }
         if (system) system->SetAvailable(false);
         std::lock_guard lock{mutex};
+        std::erase_if(library_tickets, [application](const auto& ticket) {
+            return ticket.second.application == application;
+        });
         status.removal = {.serial = status.removal.serial + 1, .application = application,
                           .content = std::move(id), .phase = "pending"};
         Reply(response, 202, {{"removal", RemovalJson(status.removal)}});
@@ -842,6 +989,7 @@ struct NetworkPortal::Impl {
     void UploadRoutes(const std::string& base, NspUpload* target, NspUpload* other) {
         const bool tagged = target && target == content.get();
         const bool games = target && target == upload.get();
+        const bool data_upload = target && target == data.get();
         // Auth/Host/Origin are checked before these routes. No server-supplied destination path
         // is ever accepted from the browser; ids are matched against the one current record.
         const auto version=[](const auto& request, auto& response) {
@@ -854,23 +1002,26 @@ struct NetworkPortal::Impl {
             response.status=value.status;
             if (!value.error.empty()) Reply(response, value.status, {{"error",value.error}});
         };
-        server->Options(base, [](const auto&, auto& response) {
+        server->Options(base, [data_upload](const auto&, auto& response) {
             response.status=204;
             response.set_header("Tus-Version", "1.0.0");
             response.set_header("Tus-Extension", "creation,termination");
-            response.set_header("Tus-Max-Size",std::to_string(NspUpload::MaxLength));
+            response.set_header("Tus-Max-Size",std::to_string(data_upload ? 8ULL << 30 : NspUpload::MaxLength));
         });
-        server->Post(base, [this,version,result,base,target,other,tagged,games](const auto& request, auto& response) {
+        server->Post(base, [this,version,result,base,target,other,tagged,games,data_upload](const auto& request, auto& response) {
             std::lock_guard admission_lock{admission};
-            if((system&&system->Snapshot().busy)||(other&&other->Snapshot().busy)){Reply(response,409,{{"error","busy"}});return;}
+            if((system&&system->Snapshot().busy)||(other&&other->Snapshot().busy)||
+               (target!=upload.get()&&upload&&upload->Snapshot().busy)||
+               (target!=content.get()&&content&&content->Snapshot().busy)||
+               (target!=data.get()&&data&&data->Snapshot().busy)){Reply(response,409,{{"error","busy"}});return;}
             if (!version(request,response)) return;
             if (!target) { Reply(response,503,{{"error","unavailable"}}); return; }
             std::uint64_t length{};
             if (!Unsigned(request.get_header_value("Upload-Length"),length) || request.has_header("Upload-Defer-Length") ||
                 (request.has_header("Content-Length") && request.get_header_value("Content-Length") != "0")) { Reply(response,400,{{"error","length"}}); return; }
-            if (length > NspUpload::MaxLength) { Reply(response,413,{{"error","length"}}); return; }
+            if (length > (data_upload ? 8ULL << 30 : NspUpload::MaxLength)) { Reply(response,413,{{"error","length"}}); return; }
             const auto metadata=request.get_header_value("Upload-Metadata");
-            std::string name,fingerprint,kind,application,destination;
+            std::string name,fingerprint,kind,application,destination,folder;
             std::size_t begin{};
             bool valid=true;
             while (begin < metadata.size()) {
@@ -886,6 +1037,9 @@ struct NetworkPortal::Impl {
                 else if (key == "fingerprint" && fingerprint.empty()) fingerprint=std::move(decoded);
                 else if (tagged && key == "kind" && kind.empty()) kind=std::move(decoded);
                 else if (tagged && key == "application" && application.empty()) application=std::move(decoded);
+                else if (data_upload && key == "kind" && kind.empty()) kind=std::move(decoded);
+                else if (data_upload && key == "application" && application.empty()) application=std::move(decoded);
+                else if (data_upload && key == "folder" && folder.empty()) folder=std::move(decoded);
                 // A game may go to Dev Mode's storage on D: instead of the internal one.
                 else if (games && key == "destination" && destination.empty()) destination=std::move(decoded);
                 else { valid=false; break; }
@@ -898,6 +1052,21 @@ struct NetworkPortal::Impl {
                 if ((kind != "update" && kind != "dlc") || !ParseHex16(application,id)) valid=false;
                 else if (!KnownGame(id)) { Reply(response,404,{{"error","game"}}); return; }
                 tag=kind+":"+application;
+            }
+            if (valid && data_upload) {
+                std::uint64_t id{};
+                if ((kind != "save" && kind != "cheat") || !ParseHex16(application, id) || !KnownGame(id)) {
+                    if (ParseHex16(application, id) && !KnownGame(id)) {
+                        Reply(response,404,{{"error","game"}});return;
+                    }
+                    valid=false;
+                } else if (kind == "save") {
+                    if (folder.size() != 64 || folder.find_first_not_of("0123456789abcdef") != std::string::npos) valid=false;
+                    else tag=kind+":"+application+":"+folder;
+                } else {
+                    if (!folder.empty()) valid=false;
+                    else tag=kind+":"+application;
+                }
             }
             if (valid && !destination.empty() && destination != "internal" && destination != "developer") valid=false;
             if (!valid) { Reply(response,400,{{"error","metadata"}}); return; }
@@ -1016,6 +1185,7 @@ NetworkPortal::NetworkPortal(std::filesystem::path games,SystemImportBackend bac
             impl->system=std::make_unique<SystemUpload>(games.parent_path(),std::move(backend));
             const auto transfers=games.parent_path()/"jadyx/transfers/content";
             impl->content=std::make_unique<NspUpload>(games,false,transfers,true);
+            impl->data=std::make_unique<NspUpload>(games,false,games.parent_path()/"jadyx/transfers/data",true,false,true);
             impl->upload=std::make_unique<NspUpload>(std::move(games),false,std::filesystem::path{},false,true);
         }
         catch (...) { impl->storage_failed=true; }
@@ -1036,6 +1206,7 @@ bool NetworkPortal::Start(const std::string& ipv4, unsigned short port, unsigned
     }
     if (impl->upload) impl->upload->Resume();
     if (impl->content) impl->content->Resume();
+    if (impl->data) impl->data->Resume();
     if (impl->system) impl->system->Resume();
     if (impl->logs) impl->logs->Resume();
     if (!LocalIpv4(ipv4) || port == 0) {
@@ -1120,6 +1291,7 @@ PortalStatus NetworkPortal::Status() const {
     }
     if (impl->upload) result.transfer=impl->upload->Snapshot();
     if (impl->content) result.content=impl->content->Snapshot();
+    if (impl->data) result.data=impl->data->Snapshot();
     if (impl->system) result.system=impl->system->Snapshot();
     return result;
 }
@@ -1145,6 +1317,7 @@ void NetworkPortal::SetUploadsAvailable(bool enabled) {
     const bool idle=(!impl->system||!impl->system->Snapshot().busy)&&!removing;
     if(impl->upload)impl->upload->SetAvailable(enabled&&idle);
     if(impl->content)impl->content->SetAvailable(enabled&&idle);
+    if(impl->data)impl->data->SetAvailable(enabled&&idle);
 }
 bool NetworkPortal::BlockForLocalOperation() {
     std::lock_guard lock{impl->admission};if(impl->RemovalActive()||(impl->system&&!impl->system->BlockForLocalOperation()))return false;
@@ -1169,6 +1342,15 @@ std::string NetworkPortal::FinalizeContent(const ContentValidator& validate) {
     if (error == "interrupted" && Status().running) impl->content->Resume();
     return error;
 }
+std::string NetworkPortal::FinalizeData(const DataValidator& validate) {
+    if (!impl->data) return "unavailable";
+    const auto tag=impl->data->Snapshot().tag;
+    const auto error=impl->data->Finalize([&](const std::filesystem::path& path, std::stop_token stop) {
+        return validate(path, tag, stop);
+    });
+    if (error == "interrupted" && Status().running) impl->data->Resume();
+    return error;
+}
 std::string NetworkPortal::RunRemoval(const RemovalRunner& run) {
     PortalRemoval job;
     {
@@ -1189,7 +1371,12 @@ std::string NetworkPortal::RunRemoval(const RemovalRunner& run) {
     if (impl->system) impl->system->SetAvailable(impl->imports_available);
     return error;
 }
-void NetworkPortal::CancelTransfer() { if (impl->upload) impl->upload->Cancel();if(impl->content)impl->content->Cancel();if(impl->system)impl->system->Cancel(); }
+void NetworkPortal::CancelTransfer() {
+    if (impl->upload) impl->upload->Cancel();
+    if (impl->content) impl->content->Cancel();
+    if (impl->data) impl->data->Cancel();
+    if (impl->system) impl->system->Cancel();
+}
 std::string NetworkPortal::RunSystemImport(std::stop_token stop){return impl->system?impl->system->RunPending(stop):"unavailable";}
 
 } // namespace Jadyx

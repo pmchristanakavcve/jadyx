@@ -3,8 +3,9 @@
 #pragma once
 
 // The "System" settings: user name, interface language, game language and console region.
-// Each choice is either explicit or follows the console/PC (Windows language and home region),
-// which is the default. Pure logic only: persistence and OS queries are in uwp_system_settings.h.
+// Choices can follow the console/PC (Windows language and home region). The fresh-install UI
+// language is Simplified Chinese; the empty UI-language value still means "follow the system".
+// Pure logic only: persistence and OS queries are in uwp_system_settings.h.
 
 #include <algorithm>
 #include <array>
@@ -25,7 +26,7 @@ inline constexpr std::size_t MaxUserNameLength = 10;
 inline constexpr std::wstring_view DefaultUserName = L"Jadyx";
 
 struct SystemSettings {
-    std::wstring ui_language;                         ///< BCP 47 tag; empty follows the system.
+    std::wstring ui_language{L"zh-CN"};               ///< Fresh-install default; empty follows the system.
     std::optional<Settings::Language> game_language;  ///< nullopt follows the system.
     std::optional<Settings::Region> region;           ///< nullopt follows the system.
     std::wstring user_name;                           ///< Empty keeps the default name.

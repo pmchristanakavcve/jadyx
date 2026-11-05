@@ -30,6 +30,9 @@ struct GameFiles {
 GameFiles FindGameFiles(std::span<const LibraryEntry> entries, std::uint64_t application);
 /// Only the dump at `launch_path`: the copy chosen in the console's game options.
 GameFiles FindDumpFiles(std::span<const LibraryEntry> entries, const std::string& launch_path);
+/// Save directories for an application under SaveDataFactory's save root.
+std::vector<std::filesystem::path> GameSaveDirectories(const std::filesystem::path& save_root,
+                                                       std::uint64_t application);
 
 /// Deletes the dumps and their Pulse sessions; unless a copy is kept, also the saves and the
 /// updates/DLC. Mods and cheats stay, they are reused if the game comes back. Returns an error

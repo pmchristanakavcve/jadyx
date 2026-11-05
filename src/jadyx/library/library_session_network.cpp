@@ -128,6 +128,9 @@ void LibrarySession::PollNetwork(TimePoint now) {
             configuration.network.content.received != state.content.received ||
             configuration.network.content.phase != state.content.phase ||
             configuration.network.content.error != state.content.error ||
+            configuration.network.data.received != state.data.received ||
+            configuration.network.data.phase != state.data.phase ||
+            configuration.network.data.error != state.data.error ||
             configuration.network.removal != state.removal ||
             configuration.network.system.phase != state.system.phase ||
             configuration.network.system.processed != state.system.processed ||
@@ -140,7 +143,8 @@ void LibrarySession::PollNetwork(TimePoint now) {
         const std::optional<StorageJob> next_job = removal_request ? StorageJob::Removal :
             system_pending ? StorageJob::PortalSystem : state.removal.phase == "pending" ? StorageJob::PortalRemoval :
             state.transfer.phase == "ready" ? StorageJob::PortalGame :
-            state.content.phase == "ready" ? std::optional{StorageJob::PortalContent} : std::nullopt;
+            state.content.phase == "ready" ? std::optional{StorageJob::PortalContent} :
+            state.data.phase == "ready" ? std::optional{StorageJob::PortalData} : std::nullopt;
         if (next_job && !configuration.busy && !loading &&
             !setup_future.valid() && !picker && !validation.valid() && !content_session && !game_options.open) {
             StartStorageJob(*next_job, state);
@@ -175,11 +179,17 @@ void LibrarySession::StartStorageJob(StorageJob next, const PortalStatus& state)
             case StorageJob::PortalRemoval:
                 return network_portal.RunRemoval([&](const PortalRemoval& r) { return portal_library.Remove(r); });
             case StorageJob::PortalContent: return network_portal.FinalizeContent(install);
+            case StorageJob::PortalData:
+                return network_portal.FinalizeData([&](const std::filesystem::path& path, const std::string& tag,
+                                                       std::stop_token token) {
+                    return portal_library.ImportData(path, tag, token);
+                });
             default: return network_portal.FinalizeGame(ValidateUploadedGame);
             }
         }};
     // Keys and firmware stay as they are: the rescan keeps every other game's titles.
     keep_titles = storage_job == StorageJob::PortalContent ? std::optional{ContentTagApplication(state.content.tag)} :
+        storage_job == StorageJob::PortalData ? std::optional{DataTagApplication(state.data.tag)} :
         storage_job == StorageJob::PortalRemoval ? std::optional{state.removal.application} :
         storage_job == StorageJob::Removal ? std::optional{removal_request->application} :
         storage_job == StorageJob::PortalGame ? std::optional<std::uint64_t>{0} : std::nullopt;

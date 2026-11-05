@@ -58,6 +58,7 @@ struct PortalStatus {
     int os_error{};        ///< WSA code behind a failed bind, 0 when there was none.
     UploadSnapshot transfer;
     UploadSnapshot content; ///< Update/DLC package; its tag is "<kind>:<application hex>".
+    UploadSnapshot data; ///< Save/cheat import; the destination is encoded in its tag.
     SystemUploadStatus system;
     PortalRemoval removal;
 };
@@ -67,7 +68,26 @@ struct PortalGame {
     std::uint64_t program_id{};
     std::string name, developer, version;
     bool removable{}; ///< Every dump is in internal storage, so the console can delete it.
+    bool downloadable{}; ///< The original NSP/XCI/NRO is retained inside the managed library.
     bool operator==(const PortalGame&) const = default;
+};
+
+struct PortalSaveFolder {
+    std::string id, label;
+};
+
+struct PortalSaveFile {
+    std::string id, folder, name;
+    std::uint64_t bytes{};
+    bool recognized{};
+};
+
+/// A server-side file source. Its path is never serialized or accepted from the browser.
+struct PortalDownload {
+    std::filesystem::path path;
+    std::string filename;
+    std::uint64_t bytes{};
+    std::string content_type{"application/octet-stream"};
 };
 
 /// One update/DLC already registered for a game.
@@ -83,12 +103,16 @@ struct PortalLibrary {
     std::function<std::pair<std::uint64_t, std::vector<PortalGame>>()> games; ///< revision + games
     std::function<std::optional<std::string>(std::uint64_t)> cover;          ///< JPEG bytes
     std::function<std::vector<PortalContent>(std::uint64_t)> contents;
+    std::function<std::pair<std::vector<PortalSaveFolder>, std::vector<PortalSaveFile>>(std::uint64_t)> saves;
+    std::function<std::optional<PortalDownload>(std::uint64_t)> game_download;
+    std::function<std::optional<PortalDownload>(std::uint64_t, const std::string&)> save_download;
     std::function<std::pair<std::uint64_t, std::uint64_t>()> progress;      ///< installed MiB, total MiB
 };
 
 /// Installs an update/DLC upload; `tag` is the validated "<kind>:<application hex>".
 using ContentValidator = std::function<std::string(const std::filesystem::path&, const std::string& tag, std::stop_token)>;
 using GameValidator = std::function<std::string(const std::filesystem::path&, const std::string& name, std::stop_token)>;
+using DataValidator = std::function<std::string(const std::filesystem::path&, const std::string& tag, std::stop_token)>;
 /// Carries out the pending removal; returns an error word, empty on success.
 using RemovalRunner = std::function<std::string(const PortalRemoval&)>;
 
@@ -119,6 +143,8 @@ public:
     std::string FinalizeGame(const GameValidator& validate);
     /// Only the library coordinator calls this, after its metadata worker has joined.
     std::string FinalizeContent(const ContentValidator& validate);
+    /// Only the library coordinator calls this, on its serial storage worker.
+    std::string FinalizeData(const DataValidator& validate);
     /// Runs the pending removal, if any. Only the library coordinator calls this, from its
     /// storage worker; uploads stay closed from the request until it returns.
     std::string RunRemoval(const RemovalRunner& run);

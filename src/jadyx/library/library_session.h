@@ -88,7 +88,7 @@ private:
                       Refresh = 64, Panel = 128, Left = 256, Right = 512, AddFolder = 1024,
                       Options = 2048, PreviousTab = 4096, NextTab = 8192, Pin = 16384, PreviousManagerTab = 32768, NextManagerTab = 65536 };
     // What the storage worker runs: one at a time, never alongside a manager or the metadata reader.
-    enum class StorageJob { Files, PortalGame, PortalSystem, PortalContent, PortalRemoval, Removal };
+    enum class StorageJob { Files, PortalGame, PortalSystem, PortalContent, PortalData, PortalRemoval, Removal };
     // The entries whose covers the current tab may show, nearest first, and a key that changes
     // when they do.
     struct Covers {
