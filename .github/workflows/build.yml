@@ -81,9 +81,7 @@ jobs:
       - uses: actions/checkout@v7
 
       # build-env.bat picks these up from C:\glslang\bin and C:\Program Files\NASM, as on a PC.
-      # With jom on the PATH openssl-cmake builds OpenSSL on every core; without it, it falls back
-      # to a single-threaded nmake (8 minutes on the runner).
-      - name: Host tools (glslang, NASM, jom)
+      - name: Host tools (glslang, NASM)
         id: tools
         shell: powershell
         run: |
@@ -95,7 +93,6 @@ jobs:
           Expand-Archive $zip C:\glslang -Force
           Copy-Item C:\glslang\bin\glslang.exe C:\glslang\bin\glslangValidator.exe
           if (-not (Test-Path "C:\Program Files\NASM\nasm.exe")) { choco install nasm -y --no-progress }
-          if (-not (Get-Command jom -ErrorAction SilentlyContinue)) { choco install jom -y --no-progress }
           if (-not (Test-Path "C:\Strawberry\perl\bin\perl.exe")) { throw "Strawberry Perl is missing from the runner" }
           # Cache the OpenSSL build by the actual compiler version rather than the hosted VM image
           # revision. GitHub refreshes that image independently of the installed toolchain.
@@ -187,6 +184,7 @@ jobs:
           tools\xbox\build-env.bat cmake --preset uwp-x64
           -DUSE_CCACHE=ON -DCCACHE_BINARY=sccache
           -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+          -DOPENSSL_ENABLE_PARALLEL=OFF
           -DJADYX_HOST_LTO=${{ inputs.lto && 'ON' || 'OFF' }}
 
       - name: Build
