@@ -11,8 +11,15 @@ on:
   pull_request:
     paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Reuse a successful CI build run and only package its APPX
+        type: string
+        required: false
+        default: ""
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -31,4 +38,5 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       package: ${{ github.event_name == 'workflow_dispatch' }}
+      source_run_id: ${{ github.event_name == 'workflow_dispatch' && inputs.source_run_id || '' }}
     secrets: inherit

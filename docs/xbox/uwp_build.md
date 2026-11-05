@@ -96,12 +96,11 @@ routes its JIT alloc/protect through `VirtualAllocFromApp`/`VirtualProtectFromAp
 ## GitHub Actions packaging
 
 A manual run of **CI** builds and tests the UWP app, then creates a signed test APPX.
-Pull-request CI runs do not package an APPX. If the APPX job was skipped after a
-successful build, run **Package existing build** with that CI run's ID. It reuses the
-unexpired `jadyx-build` and `spirv-to-dxil` artifacts, checks out their source commit,
-and signs/packages without recompiling. The source run must be successful and belong
-to the same repository and branch. The resulting `jadyx-package` artifact is retained
-for 14 days.
+Pull-request CI runs do not package an APPX. To package artifacts from a previous
+successful CI run without recompiling, run **CI** with that run's ID in `source_run_id`.
+It reuses the unexpired `jadyx-build` and `spirv-to-dxil` artifacts, checks out their
+source commit, and signs/packages them. The source run must belong to the same
+repository and branch. The resulting `jadyx-package` artifact is retained for 14 days.
 
 ## Notes / known follow-ups
 
