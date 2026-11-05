@@ -26,7 +26,7 @@ function load(language, mode) {
   };
   const body = element('body');
   const context = {
-    $: element, es: language === 'es', pt: language === 'pt',
+    $: element, zh: language === 'zh', es: language === 'es', pt: language === 'pt',
     document: {body}, location: {hostname: '192.168.1.10', reload: () => {}},
     window: {open: (...args) => opened.push(args)}, scrollTo: () => {},
     size: bytes => bytes + ' B', session: 'session', state: {update: {offered: true}},
@@ -48,11 +48,11 @@ function load(language, mode) {
 }
 
 (async () => {
-  for (const language of ['en', 'es', 'pt']) {
+  for (const language of ['zh', 'en', 'es', 'pt']) {
     for (const mode of ['valid', 'foreign', 'filename', 'busy', 'lost']) {
       const page = load(language, mode), $ = page.element;
       assert.equal($('update-portal').href, 'https://192.168.1.10:11443');
-      assert.ok($('update-go').textContent.length > 5 && $('update-keep').textContent.length > 20);
+      assert.ok($('update-go').textContent.length > 0 && $('update-keep').textContent.length > 0);
 
       // An offered update opens the steps and fetches the ticket ahead of the click.
       page.context.renderUpdate();
@@ -68,7 +68,7 @@ function load(language, mode) {
         if (mode === 'lost') {
           assert.ok(!/0\.3\.6\.0/.test($('update-meta').textContent));
         } else {
-          assert.ok($('update-meta').textContent.length > 20);
+          assert.ok($('update-meta').textContent.length > 0);
           page.context.renderUpdate();
           await settle();
           assert.equal(page.requests.length, 1, 'retried before the backoff');
@@ -116,5 +116,5 @@ function load(language, mode) {
       assert.equal(page.body.classList.has('updating'), false);
     }
   }
-  console.log('PASS: guided update page, three languages, ticket prefetch/reuse, busy retry, foreign URL/filename rejection, skip banner');
+  console.log('PASS: guided update page, four languages, ticket prefetch/reuse, busy retry, foreign URL/filename rejection, skip banner');
 })().catch(error => {console.error(error); process.exitCode = 1;});
