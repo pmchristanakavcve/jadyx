@@ -4,6 +4,11 @@ const fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto'),
 const header=fs.readFileSync('src/jadyx/storage/network_portal_page.h','utf8');
 const session='a'.repeat(64);
 const script=header.match(/<script>([\s\S]*?)<\/script>/)[1].replace("'__JADYX_PORTAL_SESSION__'",`'${session}'`);
+const htmlIds=new Set([...header.matchAll(/\bid="([^"]+)"/g)].map(([,id])=>id));
+const translationTargets=script.match(/for\(const id of \[([\s\S]*?)\]\)\$\(id\)\.textContent=words\[id\]/)[1].match(/'([^']+)'/g).map(id=>id.slice(1,-1));
+for(const id of translationTargets)assert.ok(htmlIds.has(id),`translated portal element #${id} must exist`);
+const labelBlock=script.match(/const labels=([\s\S]*?);\nfor\(const \[id,text\]/)[1];
+for(const [,id] of labelBlock.matchAll(/'([^']+)'\s*:/g))assert.ok(htmlIds.has(id),`localized portal label #${id} must exist`);
 new vm.Script(script,{filename:'network-portal-page.js'});
 assert.doesNotMatch(header,/body:has\(#pair\[hidden\]\)/,'portal view state must not depend on CSS :has support');
 assert.doesNotMatch(header,/<form id="pair">|id="code"|id="connect"/,'portal must open without a pairing form');

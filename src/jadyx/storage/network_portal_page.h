@@ -217,7 +217,7 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 <button class="cat" id="cat-keys" aria-selected="true"><svg class="ico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>
 <span><b id="cat-keys-title">Keys</b><small>prod.keys · title.keys · ZIP</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
 <button class="cat" id="cat-firmware" aria-selected="false"><svg class="ico" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3"/></svg>
-<span><b>Firmware</b><small>ZIP · NCA</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></nav>
+<span><b id="cat-firmware-title">Firmware</b><small>ZIP · NCA</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></nav>
 <section id="system-upload" class="card" hidden><div class="head"><h2 id="system-title">Keys and firmware</h2><p id="system-intro">Everything is checked before installing. Your current files stay until you confirm.</p></div>
 <article class="sub" id="keys-pane"><h3 id="keys-title">Import keys</h3><p id="keys-help">ZIP or prod.keys / title.keys.</p>
 <label class="drop"><input id="keys-files" type="file" accept=".keys,.zip" multiple><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
@@ -311,13 +311,13 @@ const words=zh?{
  recovery:'Cannot recover the partial file. Discard it before starting another.',unavailable:'Import is currently unavailable.',destination:'Dev storage (D:) is not available. Choose internal storage.',
  attempts:'Too many attempts. Wait one minute.',version:'Incompatible upload version. Reload this page.',idle:'Ready to import.'};
 if(zh||es||pt){document.documentElement.lang=language;for(const id of ['uploadtitle','uploadintro','fileslabel','namelabel','send','rename','pause','discard','privacy',
- 'kicker','status-off','status-on','code-hint','files-drop','where-internal','where-developer'])$(id).textContent=words[id];}
+ 'status-off','status-on','files-drop','where-internal','where-developer'])$(id).textContent=words[id];}
 const labels=zh?{'tab-content':'内容','tab-system':'系统','content-kicker':'导入','cat-games-title':'游戏','cat-games-sub':'NSP · XCI · NRO · 基础游戏',
  'cat-library-title':'游戏库','cat-library-sub':'更新 · DLC · 存档 · 金手指','system-kicker':'系统文件','cat-keys-title':'密钥','cat-firmware-title':'固件'}
 :pt?{'tab-content':'Conteúdo','tab-system':'Sistema','content-kicker':'Instalar','cat-games-title':'Jogos','cat-games-sub':'NSP · XCI · NRO · jogo base',
- 'cat-library-title':'Biblioteca','cat-library-sub':'Atualizações · DLC · apagar','system-kicker':'Arquivos do sistema','cat-keys-title':'Chaves'}
+ 'cat-library-title':'Biblioteca','cat-library-sub':'Atualizações · DLC · apagar','system-kicker':'Arquivos do sistema','cat-keys-title':'Chaves','cat-firmware-title':'Firmware'}
 :es?{'tab-content':'Contenido','tab-system':'Sistema','content-kicker':'Instalar','cat-games-title':'Juegos','cat-games-sub':'NSP · XCI · NRO · juego base',
- 'cat-library-title':'Biblioteca','cat-library-sub':'Actualizaciones · DLC · eliminar','system-kicker':'Archivos del sistema','cat-keys-title':'Claves'}:{};
+ 'cat-library-title':'Biblioteca','cat-library-sub':'Actualizaciones · DLC · eliminar','system-kicker':'Archivos del sistema','cat-keys-title':'Claves','cat-firmware-title':'Firmware'}:{};
 for(const [id,text]of Object.entries(labels))$(id).textContent=text;
 if(zh||es||pt)document.title=zh?'Jadyx 传送门':es?'Portal de Jadyx':'Portal Jadyx';
 $('language').setAttribute('aria-label',zh?'界面语言':es?'Idioma':pt?'Idioma':'Language');

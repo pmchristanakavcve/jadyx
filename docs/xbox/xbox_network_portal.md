@@ -12,6 +12,12 @@ usa. Tras detener/reiniciar el portal hay que abrir de nuevo la URL.
 El token de sesión se entrega al navegador al abrir el portal; el usuario no introduce
 ningún código.
 
+La página de pairing eliminada aún intentaba traducir IDs `kicker` y `code-hint`, que
+ya no existían en el HTML. El acceso a `textContent` sobre esos elementos nulos detenía
+el script antes del primer status request, por lo que el navegador conservaba los textos
+estáticos en inglés y «Not connected». Se quitaron esos destinos obsoletos, se agregó el
+ID de Firmware que faltaba y el test ahora comprueba que todos los IDs localizados existen.
+
 ## Historial: 19 octubre 2026
 
 Integrado en `main` mediante merge6e2983386b, junto con portugués brasileño y ajustes
