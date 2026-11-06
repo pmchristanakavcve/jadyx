@@ -9,7 +9,7 @@ namespace Jadyx::PortalWeb {
 // Jadyx::Palette; the only colour is the logo's. The CSP allows images from the portal itself
 // (/logo.png) and nothing external, so icons are inline SVG.
 inline constexpr std::string_view Page=R"HTML(<!doctype html>
-<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08090b"><link rel="icon" href="/logo.png"><title>Jadyx Portal</title><style>
 :root{color-scheme:dark;--canvas:#08090b;--surface:#111315;--row:#16181b;--graphite:#1c1f23;--active:#26282b;--text:#f5f5f7;--muted:#92959a;--hint:#b4b7bb;
  --warn:#f0c27a;--cyan:#2eb5e5;--crimson:#e02b41;--line:rgba(255,255,255,.08);--field:#2a2d31;
@@ -26,15 +26,14 @@ p,small{color:var(--muted)}svg{flex:none}
 .brand{display:flex;align-items:center;gap:12px;min-width:0}.brand img{width:44px;height:44px}
 .word{font-size:19px;font-weight:600;letter-spacing:.42em;white-space:nowrap}
 .caps{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding-left:12px;border-left:1px solid rgba(255,255,255,.18)}
-.tabs{display:none;padding:4px;border-radius:999px;background:rgba(28,31,35,.78);border:1px solid rgba(255,255,255,.12)}body.paired .tabs{display:flex}
+.tabs{display:none;padding:4px;border-radius:999px;background:rgba(28,31,35,.78);border:1px solid rgba(255,255,255,.12)}body:has(#pair[hidden]) .tabs{display:flex}
 .tabs button{height:36px;padding:0 24px;border:0;background:none;color:var(--muted)}.tabs button:hover:not(:disabled){background:none;color:var(--text)}
 .tabs button[aria-selected=true],.tabs button[aria-selected=true]:hover{background:var(--text);color:var(--canvas)}
 .link{justify-self:end;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);
  font-size:13px;font-weight:600;color:var(--hint);white-space:nowrap}
 .link i{width:8px;height:8px;border-radius:50%;background:var(--muted)}.status-on{display:none}
-.language{justify-self:end;height:34px;padding:0 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--hint);font:inherit;font-size:13px}
-body.paired .link i{background:var(--cyan);box-shadow:0 0 0 3px rgba(46,181,229,.22)}
-body.paired .status-off{display:none}body.paired .status-on{display:inline}
+body:has(#pair[hidden]) .link i{background:var(--cyan);box-shadow:0 0 0 3px rgba(46,181,229,.22)}
+body:has(#pair[hidden]) .status-off{display:none}body:has(#pair[hidden]) .status-on{display:inline}
 .shell{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:36px 40px 48px}
 .kicker{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 #message{position:sticky;top:92px;z-index:5;margin-bottom:24px;padding:14px 16px;border-radius:14px;color:var(--warn);background:rgba(28,24,16,.94);
@@ -49,7 +48,7 @@ body.paired .status-off{display:none}body.paired .status-on{display:inline}
 #code::placeholder{color:#3a3d42}#code:focus{border-color:var(--text);outline:none;box-shadow:0 0 0 6px rgba(255,255,255,.08)}
 #connect{width:100%;height:52px;margin-top:14px}.hint{font-size:13px;margin-top:12px}
 #connection{margin-top:16px;font-size:14px;color:var(--hint)}#connection:empty{display:none}
-.app{display:block}
+.app{display:none}body:has(#pair[hidden]) .app{display:block}body:has(#pair[hidden]) .gate{display:none}
 .view{display:grid;grid-template-columns:288px minmax(0,1fr);gap:32px;align-items:start}
 .cats{position:sticky;top:116px;display:flex;flex-direction:column;gap:6px}.cats .kicker{margin:0 0 10px 16px}
 button.cat{display:flex;align-items:center;gap:14px;width:100%;height:auto;min-height:64px;padding:10px 16px;border-radius:14px;background:none;border-color:transparent;
@@ -93,8 +92,6 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--cyan),var(--c
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px;font-variant-numeric:tabular-nums}
 .stats p{font-size:13px;color:var(--hint);padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03)}.stats p:empty{display:none}
 .sub{display:flex;flex-direction:column;gap:16px}.sub p{margin-top:-10px}
-.data-tools{margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
-.field select{width:100%;height:44px;padding:0 12px;border-radius:10px;background:var(--canvas);border:1px solid var(--field);color:var(--text);font:inherit}
 .folder{position:relative;display:inline-flex;align-items:center;gap:8px;align-self:flex-start;font-size:13px;font-weight:600;color:var(--hint);
  padding:8px 14px;border-radius:999px;border:1px solid var(--line);cursor:pointer}.folder:hover{color:var(--text);border-color:rgba(255,255,255,.3)}.folder .ico{width:16px;height:16px}
 .sub .primary{align-self:flex-start}
@@ -122,6 +119,11 @@ button.back{height:34px;padding:0 14px;margin-bottom:20px;font-size:13px;color:v
 .items li{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:var(--row);border:1px solid var(--line)}
 .items li span{flex:1;min-width:0}.items b{display:block;font-weight:600;overflow-wrap:anywhere}.items small{display:block;font-size:13px}
 .items li.empty{justify-content:center;color:var(--muted)}.items button{height:36px;padding:0 16px}
+#save-intro,#save-warning{font-size:13px;margin:0 0 16px}#save-pane .drop{margin-top:4px}#save-warning{margin-top:12px}
+#save-error{margin:0 0 16px;padding:12px 14px;border-radius:12px;color:var(--warn);background:rgba(240,194,122,.08);border:1px solid rgba(240,194,122,.24);overflow-wrap:anywhere}
+button.link{height:auto;padding:0;border:0;background:none;color:var(--cyan);text-decoration:underline;font-weight:500}button.link:hover:not(:disabled){background:none}
+#save-help{margin:0 0 20px;padding:14px 16px;border-radius:12px;background:var(--row);border:1px solid var(--line)}#save-help.flash{border-color:var(--cyan)}
+#save-help pre{margin:0 0 10px;font:13px/1.5 ui-monospace,Consolas,monospace;overflow-x:auto;color:var(--text)}#save-help p{font-size:13px;margin-top:6px}
 footer{display:flex;align-items:center;justify-content:center;gap:8px;padding:24px 16px 32px;font-size:13px;color:var(--muted)}footer .ico{width:16px;height:16px}
 body.updating .tabs{visibility:hidden}body.updating #view-content,body.updating #view-system,body.updating #log-export{display:none!important}
 #view-update{display:none;max-width:760px;margin:0 auto}body.updating #view-update{display:block}
@@ -154,12 +156,17 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 @media(max-width:420px){.brand img{width:36px;height:36px}.word{font-size:16px;letter-spacing:.3em}.caps,.link span{display:none}.link{padding:0 11px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<body class="paired"><header class="bar"><div class="brand"><img src="/logo.png" alt="Jadyx" width="44" height="44"><span class="word">JADYX</span><span class="caps">本地网络传送门</span></div>
+<body><header class="bar"><div class="brand"><img src="/logo.png" alt="Jadyx" width="44" height="44"><span class="word">JADYX</span><span class="caps">Portal</span></div>
 <nav class="tabs" role="tablist"><button id="tab-content" role="tab" aria-selected="true">Content</button><button id="tab-system" role="tab" aria-selected="false">System</button></nav>
-<span class="link" role="status"><i></i><span class="status-off" id="status-off">未连接</span><span class="status-on" id="status-on">已连接</span></span>
-<select class="language" id="language" aria-label="Language"><option value="zh-CN">简体中文</option><option value="en">English</option><option value="es">Español</option><option value="pt-BR">Português</option></select></header>
+<span class="link" role="status"><i></i><span class="status-off" id="status-off">Not connected</span><span class="status-on" id="status-on">Connected</span></span></header>
 <div class="shell"><p id="message" role="alert"></p>
-<div class="app" id="app">
+<main class="gate"><img src="/logo.png" alt="" width="132" height="132"><p class="kicker" id="kicker">Local network portal</p><h1 id="title">Connect to your console</h1>
+<p id="intro">Enter the temporary code shown in Jadyx. Keep the app open in the library.</p>
+<form id="pair"><label id="label" for="code">Connection code</label>
+<input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4}" maxlength="4" placeholder="0000" required>
+<button id="connect" class="primary">Connect</button><p class="hint" id="code-hint">4 digits · it changes every time you open the portal</p></form>
+<p id="connection" role="status" aria-live="polite"></p></main>
+<div class="app">
 <section class="card" id="view-update" aria-live="polite"><div class="update-top"><div><p class="kicker" id="update-kicker">Jadyx update</p><h1 id="update-title">Update Jadyx</h1>
 <p id="update-meta"></p></div><span class="badge" id="update-badge" hidden><svg class="ico" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg><span id="update-verified">Signature verified</span></span></div>
 <ol class="steps" id="update-steps">
@@ -172,13 +179,13 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 <div class="installing" id="update-installing" hidden><div class="spin"></div><h2 id="update-installing-title">Installing the update</h2><p id="update-installing-body"></p>
 <button id="update-reconnect">Connect again</button></div>
 <p class="keep" id="update-keep"></p><div class="update-foot"><button class="back" id="update-skip">Go to content</button></div></section>
-<div class="view" id="view-content"><nav class="cats"><p class="kicker" id="content-kicker">导入</p>
+<div class="view" id="view-content"><nav class="cats"><p class="kicker" id="content-kicker">Install</p>
 <button class="cat" id="cat-games" aria-selected="true"><svg class="ico" viewBox="0 0 24 24"><path d="M6.5 8h11a4 4 0 0 1 3.9 4.9l-1 4.4a2.4 2.4 0 0 1-4.2 1L14.5 16h-5l-1.7 2.3a2.4 2.4 0 0 1-4.2-1l-1-4.4A4 4 0 0 1 6.5 8z"/><path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 14h.01"/></svg>
-<span><b id="cat-games-title">游戏</b><small id="cat-games-sub">NSP · XCI · NRO · 基础游戏</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+<span><b id="cat-games-title">Games</b><small id="cat-games-sub">NSP · XCI · NRO · base game</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
 <button class="cat" id="cat-library" aria-selected="false" hidden><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
-<span><b id="cat-library-title">Library</b><small id="cat-library-sub">Updates · DLC · delete</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+<span><b id="cat-library-title">Library</b><small id="cat-library-sub">Updates · DLC · saves · delete</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
 <div class="store"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M5 13 7.5 5h9L19 13M7 16.5h.01"/></svg><span id="space"></span></div></nav>
-<section id="upload" class="card"><div class="head"><h2 id="uploadtitle">导入游戏</h2><p id="uploadintro">仅支持基础游戏。请选择主机上的保存位置。</p></div>
+<section id="upload" class="card" hidden><div class="head"><h2 id="uploadtitle">Import games</h2><p id="uploadintro">Base games only. Choose where your console keeps them.</p></div>
 <nav class="seg" id="where" role="tablist" hidden><button id="where-internal" role="tab" aria-selected="true">Internal storage</button><button id="where-developer" role="tab" aria-selected="false">Dev storage (D:)</button></nav>
 <label class="drop" id="files-zone"><input id="files" type="file" accept=".nsp,.xci,.nro" multiple><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
 <strong id="fileslabel">Choose NSP, XCI or NRO files</strong><span id="files-drop">or drop them here</span><span class="picked" id="files-picked"></span></label>
@@ -188,36 +195,29 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 <div class="panel"><div class="panel-top"><p id="job" role="status" aria-live="polite"></p><span class="pct" id="percent"></span></div>
 <progress id="progress" max="1" value="0"></progress><div class="stats"><p id="confirmed"></p><p id="rate"></p><p id="eta"></p><p id="queue"></p></div></div></section>
 <section id="library" class="card" hidden><p id="library-note" role="status" aria-live="polite"></p>
-<div id="library-list"><div class="head"><h2 id="library-title">Your library</h2><p id="library-intro">Open a game to manage its updates and DLC, or to delete it.</p></div>
+<div id="library-list"><div class="head"><h2 id="library-title">Your library</h2><p id="library-intro">Open a game to manage its updates, DLC and save, or to delete it.</p></div>
 <div class="grid" id="games"></div><p id="library-empty" hidden>No games yet.</p></div>
 <div id="game" hidden><button class="back" id="game-back">← Library</button>
 <div class="hero"><div class="art" id="game-art"></div><div><h2 id="game-name"></h2><p id="game-meta"></p></div><button class="danger" id="game-remove">Delete game</button></div>
 <p id="game-warning"></p>
-<div class="actions"><button id="game-download"></button></div>
-<nav class="seg" role="tablist"><button id="kind-update" role="tab" aria-selected="true">Updates</button><button id="kind-dlc" role="tab" aria-selected="false">DLC</button></nav>
+<nav class="seg" role="tablist"><button id="kind-update" role="tab" aria-selected="true">Updates</button><button id="kind-dlc" role="tab" aria-selected="false">DLC</button><button id="kind-save" role="tab" aria-selected="false">Save</button></nav>
 <ul class="items" id="items"></ul>
-<label class="drop"><input id="content-files" type="file" accept=".nsp,.xci" multiple><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+<label class="drop" id="content-zone"><input id="content-files" type="file" accept=".nsp,.xci" multiple><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
 <strong id="content-pick">Choose update NSP or XCI files</strong><span id="content-drop">or drop them here</span><span class="picked" id="content-picked"></span></label>
+<div id="save-pane" hidden><p id="save-intro"></p><div class="actions"><button id="save-download" class="primary">Download save</button></div>
+<label class="drop"><input id="save-file" type="file" accept=".zip,.7z,.rar"><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+<strong id="save-pick">Choose the save (.zip, .7z or .rar)</strong><span id="save-drop">or drop it here</span><span class="picked" id="save-picked"></span></label>
+<p id="save-warning"></p><div id="save-error" role="alert" hidden><span id="save-error-text"></span> <button class="link" id="save-error-help" type="button"></button></div>
+<div class="actions"><button id="save-send" class="primary">Load save</button><button id="save-help-toggle" type="button"></button></div>
+<div id="save-help" hidden><pre id="save-tree"></pre><p id="save-pc"></p><p id="save-rules"></p></div></div>
 <div class="actions"><button id="content-send" class="primary">Upload and install</button><button id="content-pause">Pause</button><button class="danger" id="content-discard">Discard partial file</button></div>
 <div class="panel"><div class="panel-top"><p id="content-job" role="status" aria-live="polite"></p><span class="pct" id="content-percent"></span></div>
-<progress id="content-progress" max="1" value="0"></progress><div class="stats"><p id="content-rate"></p><p id="content-eta"></p></div></div>
-<section class="sub data-tools" id="save-tools"><h3 id="save-title"></h3><p id="save-help"></p>
-<label class="field"><span id="save-folder-label"></span><select id="save-folder"></select></label>
-<label class="drop"><input id="save-files" type="file" accept=".zip,.dat,.sav,.save,.bin,.db,.sqlite,.json,.xml,.ini"><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-<strong id="save-pick"></strong><span id="save-drop"></span><span class="picked" id="save-picked"></span></label>
-<div class="actions"><button id="save-send" class="primary"></button><button id="data-pause"></button><button class="danger" id="data-discard"></button></div>
-<div class="panel"><div class="panel-top"><p id="data-job" role="status" aria-live="polite"></p><span class="pct" id="data-percent"></span></div>
-<progress id="data-progress" max="1" value="0"></progress><div class="stats"><p id="data-rate"></p><p id="data-eta"></p></div></div>
-<ul class="items" id="save-list"></ul></section>
-<section class="sub data-tools" id="cheat-tools"><h3 id="cheat-title"></h3><p id="cheat-help"></p>
-<label class="drop"><input id="cheat-files" type="file" accept=".txt,.zip"><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-<strong id="cheat-pick"></strong><span id="cheat-drop"></span><span class="picked" id="cheat-picked"></span></label>
-<button id="cheat-send" class="primary"></button></section></div></section></div>
+<progress id="content-progress" max="1" value="0"></progress><div class="stats"><p id="content-rate"></p><p id="content-eta"></p></div></div></div></section></div>
 <div class="view" id="view-system" hidden><nav class="cats"><p class="kicker" id="system-kicker">System files</p>
 <button class="cat" id="cat-keys" aria-selected="true"><svg class="ico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>
 <span><b id="cat-keys-title">Keys</b><small>prod.keys · title.keys · ZIP</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
 <button class="cat" id="cat-firmware" aria-selected="false"><svg class="ico" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3"/></svg>
-<span><b id="cat-firmware-title">Firmware</b><small>ZIP · NCA</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></nav>
+<span><b>Firmware</b><small>ZIP · NCA</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></nav>
 <section id="system-upload" class="card" hidden><div class="head"><h2 id="system-title">Keys and firmware</h2><p id="system-intro">Everything is checked before installing. Your current files stay until you confirm.</p></div>
 <article class="sub" id="keys-pane"><h3 id="keys-title">Import keys</h3><p id="keys-help">ZIP or prod.keys / title.keys.</p>
 <label class="drop"><input id="keys-files" type="file" accept=".keys,.zip" multiple><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
@@ -243,37 +243,14 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 <footer><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg><span id="privacy">Local network · HTTP connection without encryption.</span></footer>
 <script>
 'use strict';
-const $=id=>document.getElementById(id),availableLanguages=['zh-CN','en','es','pt-BR'];
-let savedLanguage='';
-try{savedLanguage=localStorage.getItem('jadyx-portal-language')||'';}catch{}
-const language=availableLanguages.includes(savedLanguage)?savedLanguage:'zh-CN';
-const zh=language==='zh-CN',es=language==='es',pt=language==='pt-BR';
-$('language').value=language;
-$('language').addEventListener('change',()=>{try{localStorage.setItem('jadyx-portal-language',$('language').value);}catch{}location.reload();});
-const words=zh?{
- title:'连接到主机',intro:'输入 Jadyx 中显示的临时验证码，并保持应用停留在游戏库页面。',label:'连接验证码',connect:'连接',
- uploadtitle:'导入游戏',uploadintro:'仅支持基础游戏。请选择主机保存游戏的位置。','where-internal':'内部存储','where-developer':'开发者存储（D:）',
- fileslabel:'选择 NSP、XCI 或 NRO 文件',namelabel:'目标文件名（仅单个文件）',send:'上传 / 继续',rename:'重命名待处理文件',pause:'暂停',discard:'删除未完成文件',
- kicker:'本地网络传送门','status-off':'未连接','status-on':'已连接','code-hint':'4 位验证码 · 每次打开传送门都会更换','files-drop':'或将文件拖到此处',files:'个文件',
- privacy:'仅限本地网络 · HTTP 连接未加密。',ok:'连接成功。',bad:'验证码错误或已过期。请在 Jadyx 中重新生成。',
- origin:'页面地址与主机不匹配。请使用 Jadyx 显示的传送门地址。',network:'无法连接到主机。请确认设备在同一网络，并使用 Jadyx 显示的地址。',pairUnavailable:'传送门暂不可用。请检查主机上的 Jadyx 是否仍在游戏库页面。',
- lost:'连接已失效，请刷新此页面重新连接；已确认的进度会保留。',free:'可用空间',confirmed:'已确认',speed:'速度',eta:'剩余时间',queue:'队列',
- choose:'请选择一个或多个 NSP、XCI 或 NRO 文件。',same:'有不同的文件等待处理。请选择相同文件以继续，或删除未完成的传输。',
- receiving:'正在接收',paused:'已暂停。请选择相同文件以继续。',ready:'等待验证',validating:'正在验证文件',publishing:'正在加入游戏库',complete:'已加入游戏库',
- busy:'请等待 Jadyx 当前操作完成。',exists:'目标文件已存在。请更改目标名称后重试。',space:'可用空间不足。',
- file:'文件名或文件无效。请选择 NSP、XCI 或 NRO 文件。',base:'仅支持基础游戏；不支持更新、DLC 或混合内容包。',
- nsp:'文件结构无效。',incomplete:'文件不完整。',keys:'无法读取元数据。请检查主机密钥和文件。',
- disk:'无法写入或发布文件。',interrupted:'传输已中断。可以从已确认进度处继续。',partial:'有未完成的传输。请继续或删除。',
- recovery:'无法恢复未完成文件。请先删除后再开始新的传输。',unavailable:'当前无法导入。',destination:'开发者存储（D:）不可用，请选择内部存储。',
- attempts:'尝试次数过多，请等待一分钟。',version:'传输版本不兼容，请刷新页面。',idle:'可以开始导入。'
-}:pt?{
+const $=id=>document.getElementById(id),lang=navigator.language.toLowerCase(),es=lang.startsWith('es'),pt=lang.startsWith('pt');
+const words=pt?{
  title:'Conecte-se ao seu console',intro:'Digite o código temporário que o Jadyx mostra. Mantenha o app aberto na biblioteca.',label:'Código de conexão',connect:'Conectar',
  uploadtitle:'Importar jogos',uploadintro:'Somente jogos base. Escolha onde o console os guarda.','where-internal':'Armazenamento interno','where-developer':'Armazenamento dev (D:)',fileslabel:'Selecionar arquivos NSP, XCI ou NRO',
  namelabel:'Nome de destino (um único arquivo)',send:'Enviar / retomar',rename:'Renomear arquivo pendente',pause:'Pausar',discard:'Apagar arquivo parcial',
  kicker:'Portal da rede local','status-off':'Desconectado','status-on':'Conectado','code-hint':'4 dígitos · muda cada vez que você abre o portal','files-drop':'ou arraste-os para cá',files:'arquivos',
  privacy:'Rede local · Conexão HTTP sem criptografia.',ok:'Conexão estabelecida.',bad:'Código incorreto ou expirado. Gere outro no Jadyx.',
- origin:'O endereço da página não corresponde ao console. Use o endereço mostrado no Jadyx.',network:'Não foi possível conectar ao console. Confira se os dispositivos estão na mesma rede e use o endereço mostrado no Jadyx.',pairUnavailable:'O portal está temporariamente indisponível. Confira se o Jadyx continua aberto na biblioteca.',
- lost:'A sessão expirou. Atualize esta página para reconectar; o progresso confirmado é mantido.',free:'Espaço livre',confirmed:'Confirmado',
+ lost:'A conexão foi encerrada. Conecte-se de novo pelo Jadyx; o progresso confirmado é mantido.',free:'Espaço livre',confirmed:'Confirmado',
  speed:'Velocidade',eta:'Tempo restante',queue:'Na fila',choose:'Selecione um ou mais arquivos NSP, XCI ou NRO.',same:'Há outro arquivo pendente. Selecione o mesmo arquivo para retomá-lo ou apague a transferência parcial.',
  receiving:'Recebendo',paused:'Pausado. Selecione o mesmo arquivo para continuar.',ready:'Aguardando validação',validating:'Validando arquivo',publishing:'Adicionando à biblioteca',complete:'Instalado na biblioteca',
  busy:'Aguarde o fim da operação no Jadyx.',exists:'Esse nome já existe. Altere o nome de destino e tente de novo.',space:'Não há espaço suficiente.',
@@ -288,8 +265,7 @@ const words=zh?{
  namelabel:'Nombre de destino (un solo archivo)',send:'Subir / reanudar',rename:'Renombrar archivo pendiente',pause:'Pausar',discard:'Eliminar archivo parcial',
  kicker:'Portal de red local','status-off':'Sin conectar','status-on':'Conectado','code-hint':'4 dígitos · cambia cada vez que abres el portal','files-drop':'o arrástralos aquí',files:'archivos',
  privacy:'Red local · Conexión HTTP sin cifrado.',ok:'Conexión establecida.',bad:'Código incorrecto o caducado. Genera otro en Jadyx.',
- origin:'La dirección de la página no coincide con la consola. Usa la dirección que muestra Jadyx.',network:'No se pudo conectar con la consola. Comprueba que ambos dispositivos estén en la misma red y usa la dirección que muestra Jadyx.',pairUnavailable:'El portal no está disponible temporalmente. Comprueba que Jadyx siga abierto en la biblioteca.',
- lost:'La sesión ha caducado. Actualiza esta página para volver a conectar; se conserva el progreso confirmado.',free:'Espacio libre',confirmed:'Confirmado',
+ lost:'La conexión se ha cerrado. Vuelve a conectarte desde Jadyx; el progreso confirmado se conserva.',free:'Espacio libre',confirmed:'Confirmado',
  speed:'Velocidad',eta:'Tiempo restante',queue:'En cola',choose:'Selecciona uno o varios archivos NSP, XCI o NRO.',same:'Hay un archivo pendiente distinto. Selecciona el mismo archivo para reanudarlo o elimina la transferencia parcial.',
  receiving:'Recibiendo',paused:'En pausa. Selecciona el mismo archivo para continuar.',ready:'Esperando a validar',validating:'Validando archivo',publishing:'Añadiendo a la biblioteca',complete:'Instalado en la biblioteca',
  busy:'Espera a que termine la operación en Jadyx.',exists:'Ese nombre ya existe. Cambia el nombre de destino y vuelve a intentarlo.',space:'No hay espacio suficiente.',
@@ -298,9 +274,7 @@ const words=zh?{
  disk:'No se pudo escribir o publicar el archivo.',interrupted:'Transferencia interrumpida. Puedes reanudar desde el progreso confirmado.',
  partial:'Hay una transferencia pendiente. Reanúdala o elimínala.',recovery:'No se pudo recuperar el parcial. Elimínalo antes de iniciar otro.',unavailable:'La importación no está disponible en este momento.',destination:'El almacenamiento dev (D:) no está disponible. Elige el almacenamiento interno.',
  attempts:'Demasiados intentos. Espera un minuto.',version:'Versión de transferencia incompatible. Recarga la página.',idle:'Listo para importar.'
-}:{ok:'Connected.',bad:'Incorrect or expired code. Generate another in Jadyx.',
- origin:'The page address does not match the console. Open the portal using the address shown in Jadyx.',network:'Could not reach the console. Check that both devices are on the same network and use the address shown in Jadyx.',pairUnavailable:'The portal is temporarily unavailable. Check that Jadyx is still open in the library.',
- lost:'Session expired. Refresh this page to reconnect; confirmed progress is retained.',
+}:{ok:'Connected.',bad:'Incorrect or expired code. Generate another in Jadyx.',lost:'Connection closed. Reconnect in Jadyx; confirmed progress is retained.',
  free:'Free space','where-internal':'Internal storage','where-developer':'Dev storage (D:)',confirmed:'Confirmed',speed:'Speed',eta:'Time left',queue:'Queued',choose:'Choose one or more NSP, XCI or NRO files.',files:'files',
  same:'A different file is pending. Select the same file to resume, or discard the partial upload.',receiving:'Receiving',paused:'Paused. Select the same file to continue.',
  ready:'Waiting for validation',validating:'Validating file',publishing:'Adding to library',complete:'Installed in your library',busy:'Wait for the operation in Jadyx to finish.',
@@ -310,25 +284,22 @@ const words=zh?{
  interrupted:'Transfer interrupted. You can resume from confirmed progress.',partial:'An upload is pending. Resume or discard it.',
  recovery:'Cannot recover the partial file. Discard it before starting another.',unavailable:'Import is currently unavailable.',destination:'Dev storage (D:) is not available. Choose internal storage.',
  attempts:'Too many attempts. Wait one minute.',version:'Incompatible upload version. Reload this page.',idle:'Ready to import.'};
-if(zh||es||pt){document.documentElement.lang=language;for(const id of ['uploadtitle','uploadintro','fileslabel','namelabel','send','rename','pause','discard','privacy',
- 'status-off','status-on','files-drop','where-internal','where-developer'])$(id).textContent=words[id];}
-const labels=zh?{'tab-content':'内容','tab-system':'系统','content-kicker':'导入','cat-games-title':'游戏','cat-games-sub':'NSP · XCI · NRO · 基础游戏',
- 'cat-library-title':'游戏库','cat-library-sub':'更新 · DLC · 存档 · 金手指','system-kicker':'系统文件','cat-keys-title':'密钥','cat-firmware-title':'固件'}
-:pt?{'tab-content':'Conteúdo','tab-system':'Sistema','content-kicker':'Instalar','cat-games-title':'Jogos','cat-games-sub':'NSP · XCI · NRO · jogo base',
- 'cat-library-title':'Biblioteca','cat-library-sub':'Atualizações · DLC · apagar','system-kicker':'Arquivos do sistema','cat-keys-title':'Chaves','cat-firmware-title':'Firmware'}
+if(es||pt){document.documentElement.lang=pt?'pt-BR':'es';for(const id of ['title','intro','label','connect','uploadtitle','uploadintro','fileslabel','namelabel','send','rename','pause','discard','privacy',
+ 'kicker','status-off','status-on','code-hint','files-drop','where-internal','where-developer'])$(id).textContent=words[id];}
+const labels=pt?{'tab-content':'Conteúdo','tab-system':'Sistema','content-kicker':'Instalar','cat-games-title':'Jogos','cat-games-sub':'NSP · XCI · NRO · jogo base',
+ 'cat-library-title':'Biblioteca','cat-library-sub':'Atualizações · DLC · saves · apagar','system-kicker':'Arquivos do sistema','cat-keys-title':'Chaves'}
 :es?{'tab-content':'Contenido','tab-system':'Sistema','content-kicker':'Instalar','cat-games-title':'Juegos','cat-games-sub':'NSP · XCI · NRO · juego base',
- 'cat-library-title':'Biblioteca','cat-library-sub':'Actualizaciones · DLC · eliminar','system-kicker':'Archivos del sistema','cat-keys-title':'Claves','cat-firmware-title':'Firmware'}:{};
+ 'cat-library-title':'Biblioteca','cat-library-sub':'Actualizaciones · DLC · partidas · eliminar','system-kicker':'Archivos del sistema','cat-keys-title':'Claves'}:{};
 for(const [id,text]of Object.entries(labels))$(id).textContent=text;
-if(zh||es||pt)document.title=zh?'Jadyx 传送门':es?'Portal de Jadyx':'Portal Jadyx';
-$('language').setAttribute('aria-label',zh?'界面语言':es?'Idioma':pt?'Idioma':'Language');
+if(es||pt)document.title='Portal Jadyx';
 // The header's tabs and each page's categories, as in the console: one of each group is shown.
 const tabs=[['tab-content','view-content'],['tab-system','view-system']],categories=[['cat-keys','keys-pane'],['cat-firmware','firmware-pane']];
 function choose(group,chosen){for(const [button,view]of group){$(button).ariaSelected=String(button===chosen);$(view).hidden=button!==chosen;}}
 for(const group of [tabs,categories])for(const [button]of group)$(button).addEventListener('click',()=>choose(group,button));
 const selectedChunk=Number(new URLSearchParams(location.search).get('chunk'));
 const chunk=(selectedChunk===4||selectedChunk===16||selectedChunk===64?selectedChunk:16)*1048576;
-let session='__JADYX_PORTAL_SESSION__',timer,state={},running=false,stopped=false,currentXHR=null,currentId='',rates=[],pane='games',contentRunning=false,where='internal';
-let systemRunning=false,systemReviewId='';
+let session='',timer,state={},running=false,stopped=false,currentXHR=null,currentId='',rates=[],pane='games',contentRunning=false,where='internal';
+let systemRunning=false,systemReviewId='',saveDownloading=false;
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),mib=n=>(n/1048576).toFixed(1),reason=e=>words[e.message]||words.interrupted;
 const size=n=>n>=1073741824?(n/1073741824).toFixed(2)+' GiB':mib(n)+' MiB',percent=(done,total)=>total?Math.floor(100*Math.min(1,done/total))+' %':'';
 // What a drop zone holds: the file's name, or how many and their total size.
@@ -360,10 +331,11 @@ function render(){
  // Both volumes: the internal one and, when present, Dev Mode's storage on D:.
  const gib=bytes=>((bytes||0)/1073741824).toFixed(2)+' GiB';
  $('space').textContent=words.free+': '+(s.developer_available?'\n'+words['where-internal']+' · '+gib(s.free_bytes)+'\n'+words['where-developer']+' · '+gib(s.developer_free_bytes):gib(s.free_bytes));
- $('job').textContent=(s.name?s.name+'\n':'')+(words[s.phase]||words.idle);
- $('progress').value=s.length?Math.min(1,(s.received||0)/s.length):0;
- $('percent').textContent=percent(s.received||0,s.length);
- $('confirmed').textContent=words.confirmed+': '+mib(s.offset||0)+' / '+mib(s.length||0)+' MiB';
+ const transfer=s.phase==='complete'&&!running?{}:s;
+ $('job').textContent=(transfer.name?transfer.name+'\n':'')+(words[transfer.phase]||words.idle);
+ $('progress').value=transfer.length?Math.min(1,(transfer.received||0)/transfer.length):0;
+ $('percent').textContent=percent(transfer.received||0,transfer.length);
+ $('confirmed').textContent=words.confirmed+': '+mib(transfer.offset||0)+' / '+mib(transfer.length||0)+' MiB';
  $('files').disabled=running;$('name').disabled=running||s.phase==='validating'||s.phase==='publishing';
  $('send').disabled=running||contentRunning||systemRunning||state.system?.busy||!session||!state.uploads||s.phase==='ready'||s.phase==='validating'||s.phase==='publishing';
  $('pause').disabled=systemRunning||state.system?.busy||!s.id||s.phase==='complete'||s.phase==='validating'||s.phase==='publishing';
@@ -373,22 +345,25 @@ function render(){
  renderSystem();
  renderLibrary();
 }
-async function refresh(){const response=await api('/api/v1/status');state=await response.json();document.body.classList.add('paired');render();followLibrary();followData();return state;}
-let portalFailures=0,polling=false;
-function startPolling(){
- clearInterval(timer);
- timer=setInterval(async()=>{if(polling)return;polling=true;try{await refresh();portalFailures=0;$('message').textContent='';}catch(error){
+async function refresh(){const response=await api('/api/v1/status');state=await response.json();render();followLibrary();return state;}
+$('pair').addEventListener('submit',async event=>{
+ event.preventDefault();$('connect').disabled=true;$('message').textContent='';
+ try{
+ const response=await fetch('/api/v1/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('code').value})});
+ if(!response.ok){$('connection').textContent=response.status===429?words.attempts:words.bad;return;}
+ session=(await response.json()).session;$('code').value='';$('pair').hidden=true;$('connection').textContent=words.ok;
+ await refresh();clearInterval(timer);let polling=false;
+ timer=setInterval(async()=>{if(polling)return;polling=true;try{await refresh();failures=0;$('connection').textContent=words.ok;}catch(error){
  // After the package went to Device Portal, the console going away is the install closing Jadyx.
- if(updateStarted&&(error.message==='lost'||++portalFailures>=3)){clearInterval(timer);session='';updateGone=true;renderUpdate();}
- else if(error.message==='lost'){clearInterval(timer);stopped=true;if(currentXHR)currentXHR.abort();session='';document.body.classList.remove('paired');render();$('message').textContent=words.lost;}
- else $('message').textContent=words.interrupted;
+ if(updateStarted&&(error.message==='lost'||++failures>=3)){clearInterval(timer);session='';updateGone=true;renderUpdate();}
+ else if(error.message==='lost'){clearInterval(timer);stopped=true;if(currentXHR)currentXHR.abort();session='';$('pair').hidden=false;$('upload').hidden=true;$('connection').textContent=words.lost;}
+ else $('connection').textContent=words.interrupted;
  }finally{polling=false;}},1000);
-}
-const portalReady=(async()=>{
- try{await refresh();}
- catch(error){$('message').textContent=error.message==='lost'?words.lost:words.network;}
- startPolling();
-})();
+ }catch{$('connection').textContent=words.lost;}finally{$('connect').disabled=false;}
+});
+// Only digits; the eighth one connects without reaching for the button.
+$('code').addEventListener('input',()=>{const code=$('code').value.replace(/\D/g,'').slice(0,4);$('code').value=code;
+ if(code.length===4&&!$('connect').disabled)$('pair').requestSubmit?.();});
 // SHA-256 fallback is required because WebCrypto is not available on ordinary HTTP LAN origins.
 // Only first/last 64 KiB + file identity are sampled: this is a resume fingerprint, not full integrity validation.
 function sha256(input){
@@ -467,8 +442,8 @@ for(const id of ['files','content-files','keys-files','firmware-files']){
 $('send').addEventListener('click',async()=>{
  if(running||systemRunning||state.system?.busy)return;const files=Array.from($('files').files);if(!files.length){$('message').textContent=words.choose;return;}
  running=true;stopped=false;rates=[];$('message').textContent='';render();
- try{for(let i=0;i<files.length;i++){if(stopped)break;$('queue').textContent=words.queue+': '+(files.length-i-1);await sendFile(files[i],files.length===1?$('name').value:files[i].name);}}
- catch(error){$('message').textContent=reason(error);}finally{running=false;currentXHR=null;try{await refresh();}catch{}render();}
+ try{for(let i=0;i<files.length;i++){if(stopped)break;$('queue').textContent=words.queue+': '+(files.length-i-1);await sendFile(files[i],files.length===1?$('name').value:files[i].name);}if(!stopped){$('files').value='';$('name').value='';$('message').textContent=words.complete;}}
+ catch(error){$('message').textContent=reason(error);}finally{running=false;currentXHR=null;for(const id of ['rate','eta','queue'])$(id).textContent='';try{await refresh();}catch{}render();}
 });
 async function control(action,target=gameTarget){
  stopped=true;if(currentXHR)currentXHR.abort();$('message').textContent='';
@@ -483,31 +458,8 @@ $('rename').addEventListener('click',async()=>{try{await api('/api/v1/uploads/'+
 // Library: the console's games, each opening into its updates and DLC. An upload is installed
 // in internal storage by the console's content import; a deletion runs there too, after the
 // same second press the console asks for.
-const libraryWords=zh?{
- title:'游戏库',intro:'打开游戏可管理更新、DLC、存档与金手指，也可以下载原始游戏文件。',empty:'游戏库为空。',back:'← 游戏库',
- update:'更新',dlc:'DLC',none_update:'未安装更新。',none_dlc:'未安装 DLC。',pick_update:'选择更新 NSP 或 XCI 文件',pick_dlc:'选择 DLC NSP 或 XCI 文件',
- send:'上传并安装',remove_game:'删除游戏',remove:'删除',confirm:'再次点击确认',external_item:'外部文件夹',
- warning:'删除游戏也会删除此主机上的存档、更新和 DLC。模组与金手指会保留。此操作无法撤销。',
- external:'此游戏位于外部文件夹，Jadyx 不会删除外部文件。',removing:'正在删除…',removed_game:'游戏已删除。',removed:'内容已删除。',
- ready:'等待安装',validating:'正在安装',complete:'已安装',idle:'选择要安装的文件。',failed:'操作未能完成。',
- game:'游戏已不在游戏库中，或无法删除。',content:'无法删除该内容。',saves:'游戏已删除，但部分存档未能删除。',
- wrong_game:'该内容包属于其他游戏。',kind:'内容包类型与所选类型（更新或 DLC）不符。',conflict:'已安装的内容版本与此版本冲突。',
- hash:'内容包已损坏。',requirements:'内容包需要更新版本的游戏或系统固件。',unsupported:'不支持该内容包。',invalid:'内容包无效。',
- metadata:'请刷新页面后重试。',game_download:'下载原始游戏文件',download:'下载',downloads:'下载',save_title:'存档',save_help:'选择存档目录后上传 ZIP 或存档文件。覆盖文件前会先备份到主机本地数据目录。',
- save_folder:'存档目录',save_pick:'选择存档 ZIP 或文件',save_drop:'支持 ZIP、GameData0、AutoSave、CRYSTAR*.dat 等常见存档',save_send:'导入存档',
- saves_empty:'此游戏没有可用存档文件。',saves_none:'尚无存档目录。',save_download:'导出',recognized:'已识别',unrecognized:'文件',
- cheat_title:'金手指',cheat_help:'导入 Atmosphère 格式的 TXT 或包含单个 TXT 的 ZIP。新导入的金手指默认关闭。',
- cheat_pick:'选择金手指 TXT 或 ZIP',cheat_drop:'仅导入当前游戏版本（Build ID）',cheat_send:'导入金手指',
- data_ready:'等待导入',data_validating:'正在验证并导入',data_complete:'导入完成',data_idle:'选择存档或金手指文件。',
- save_imported:'存档已导入，覆盖前的备份已保留。',cheat_imported:'金手指已导入并默认关闭。',
- save_file:'存档文件无效或与所选游戏不匹配。',cheat_file:'金手指文件无效或无法识别。',build:'当前游戏版本没有可用 Build ID，无法安全导入金手指。',
- choose_file:'每次只能选择一个文件导入。',
- rollback:'导入失败，且自动恢复备份失败。请勿启动游戏；备份仍在主机本地数据目录。',
- changed:'文件在下载前已更改，请重新载入存档列表。',pause:'暂停',discard:'删除未完成文件',file:'文件无效或无法读取。',
- space:'可用空间不足。',disk:'无法写入或发布文件。',interrupted:'导入已中断，可从已确认进度处继续。',unavailable:'当前无法导入。',
- cheat:'金手指文件无效或没有可用代码。',random:'无法安全生成下载链接，请重试。'
-}:pt?{
- title:'Sua biblioteca',intro:'Abra um jogo para gerenciar suas atualizações e DLC ou para apagá-lo.',empty:'Ainda não há jogos.',back:'← Biblioteca',
+const libraryWords=pt?{
+ title:'Sua biblioteca',intro:'Abra um jogo para gerenciar suas atualizações, DLC e save, ou para apagá-lo.',empty:'Ainda não há jogos.',back:'← Biblioteca',
  update:'Atualizações',dlc:'DLC',none_update:'Nenhuma atualização instalada.',none_dlc:'Nenhum DLC instalado.',pick_update:'Selecionar NSP ou XCI de atualização',pick_dlc:'Selecionar NSP ou XCI de DLC',
  send:'Enviar e instalar',remove_game:'Apagar jogo',remove:'Apagar',confirm:'Clique de novo para confirmar',external_item:'Pasta externa',
  warning:'Apagar o jogo remove também seus saves, atualizações e DLC deste console. Mods e cheats são mantidos. Não pode ser desfeito.',
@@ -517,7 +469,7 @@ const libraryWords=zh?{
  wrong_game:'Esse pacote pertence a outro jogo.',kind:'O pacote não é do tipo escolhido (atualização ou DLC).',conflict:'Já existe uma versão conflitante desse conteúdo.',
  hash:'O pacote está danificado.',requirements:'O pacote exige uma versão mais nova do jogo ou do firmware.',unsupported:'Esse pacote não é compatível.',invalid:'O pacote não é válido.',metadata:'Recarregue a página e tente de novo.'
 }:es?{
- title:'Tu biblioteca',intro:'Abre un juego para gestionar sus actualizaciones y DLC, o para eliminarlo.',empty:'Todavía no hay juegos.',back:'← Biblioteca',
+ title:'Tu biblioteca',intro:'Abre un juego para gestionar sus actualizaciones, DLC y partida, o para eliminarlo.',empty:'Todavía no hay juegos.',back:'← Biblioteca',
  update:'Actualizaciones',dlc:'DLC',none_update:'No hay actualizaciones instaladas.',none_dlc:'No hay DLC instalados.',pick_update:'Seleccionar NSP o XCI de actualización',pick_dlc:'Seleccionar NSP o XCI de DLC',
  send:'Subir e instalar',remove_game:'Eliminar juego',remove:'Eliminar',confirm:'Pulsa otra vez para confirmar',external_item:'Carpeta externa',
  warning:'Eliminar el juego borra también sus partidas, actualizaciones y DLC de esta consola. Los mods y trucos se conservan. No se puede deshacer.',
@@ -527,7 +479,7 @@ const libraryWords=zh?{
  wrong_game:'Ese paquete es de otro juego.',kind:'El paquete no es del tipo elegido (actualización o DLC).',conflict:'Ya hay una versión de ese contenido que choca con esta.',
  hash:'El paquete está dañado.',requirements:'El paquete necesita una versión más nueva del juego o del firmware.',unsupported:'Ese paquete no es compatible.',invalid:'El paquete no es válido.',metadata:'Recarga la página y vuelve a intentarlo.'
 }:{
- title:'Your library',intro:'Open a game to manage its updates and DLC, or to delete it.',empty:'No games yet.',back:'← Library',
+ title:'Your library',intro:'Open a game to manage its updates, DLC and save, or to delete it.',empty:'No games yet.',back:'← Library',
  update:'Updates',dlc:'DLC',none_update:'No updates installed.',none_dlc:'No DLC installed.',pick_update:'Choose update NSP or XCI files',pick_dlc:'Choose DLC NSP or XCI files',
  send:'Upload and install',remove_game:'Delete game',remove:'Delete',confirm:'Click again to confirm',external_item:'External folder',
  warning:'Deleting the game also deletes its saves, updates and DLC from this console. Mods and cheats are kept. This cannot be undone.',
@@ -536,107 +488,102 @@ const libraryWords=zh?{
  game:'The game is no longer in the library or could not be deleted.',content:'That content could not be deleted.',saves:'The game was deleted, but some saves could not be removed.',
  wrong_game:'That package belongs to another game.',kind:'The package is not the chosen kind (update or DLC).',conflict:'A conflicting version of this content is already installed.',
  hash:'The package is damaged.',requirements:'The package needs a newer game or firmware version.',unsupported:'That package is not supported.',invalid:'The package is not valid.',metadata:'Reload this page and try again.'};
-const portalDataDefaults={
- game_download:'Download original game file',download:'Download',downloads:'Downloads',save_title:'Save data',save_help:'Choose a save folder, then upload a ZIP or save file. Existing files are backed up before replacement.',
- save_folder:'Save folder',save_pick:'Choose a save ZIP or file',save_drop:'Common names such as GameData0, AutoSave and CRYSTAR*.dat are detected',save_send:'Import save data',
- saves_empty:'No save files are available for this game.',saves_none:'No save folders are available.',save_download:'Export',recognized:'Recognized',unrecognized:'File',
- cheat_title:'Cheats',cheat_help:'Import an Atmosphère TXT or a ZIP containing one TXT. Imported cheats start disabled.',
- cheat_pick:'Choose cheat TXT or ZIP',cheat_drop:'Only the selected game build (Build ID) is accepted',cheat_send:'Import cheats',
- data_ready:'Waiting to import',data_validating:'Validating and importing',data_complete:'Import complete',data_idle:'Choose save or cheat files.',
- save_imported:'Save data imported; overwritten files were backed up.',cheat_imported:'Cheats imported and disabled by default.',
- save_file:'Save file is invalid or does not match the selected game.',cheat_file:'Cheat file is invalid or cannot be recognized.',
- choose_file:'Choose exactly one file to import.',
- build:'The current game build has no Build ID; cheats cannot be safely imported.',
- rollback:'Import and automatic backup recovery failed. Do not start the game; the backup remains in the console local data folder.',
- changed:'The file changed before download. Reload the save list.',pause:'Pause',discard:'Discard partial upload',file:'The file is invalid or could not be read.',
- space:'Not enough free space.',disk:'Could not write or publish the file.',interrupted:'Import interrupted; confirmed progress can be resumed.',
- unavailable:'Import is currently unavailable.',cheat:'The cheat file is invalid or contains no usable codes.',random:'Could not create a secure download link. Try again.'
-};
-for(const [key,value]of Object.entries(portalDataDefaults))if(!(key in libraryWords))libraryWords[key]=value;
-if(pt)Object.assign(libraryWords,{
- game_download:'Baixar jogo original',download:'Baixar',downloads:'Downloads',save_title:'Dados salvos',save_help:'Escolha uma pasta de saves e envie um ZIP ou arquivo. Os arquivos existentes são copiados antes de substituir.',
- save_folder:'Pasta de saves',save_pick:'Selecionar ZIP ou arquivo de save',save_drop:'Nomes comuns como GameData0, AutoSave e CRYSTAR*.dat são detectados',save_send:'Importar save',
- saves_empty:'Não há arquivos de save disponíveis para este jogo.',saves_none:'Não há pastas de save disponíveis.',save_download:'Exportar',recognized:'Reconhecido',unrecognized:'Arquivo',
- cheat_title:'Cheats',cheat_help:'Importe TXT do Atmosphère ou ZIP com um único TXT. Os cheats importados começam desativados.',
- cheat_pick:'Selecionar TXT ou ZIP de cheats',cheat_drop:'Somente o Build ID selecionado é aceito',cheat_send:'Importar cheats',
- data_ready:'Aguardando importação',data_validating:'Validando e importando',data_complete:'Importação concluída',data_idle:'Selecione arquivos de save ou cheats.',
- save_imported:'Save importado; os arquivos substituídos foram copiados.',cheat_imported:'Cheats importados e desativados por padrão.',
- save_file:'Arquivo de save inválido ou incompatível com o jogo selecionado.',cheat_file:'Arquivo de cheats inválido ou não reconhecido.',
- choose_file:'Selecione exatamente um arquivo para importar.',
- build:'O jogo atual não tem Build ID; não é possível importar cheats com segurança.',
- rollback:'A importação e a restauração automática falharam. Não inicie o jogo; o backup permanece nos dados locais do console.',
- changed:'O arquivo mudou antes do download. Atualize a lista de saves.',pause:'Pausar',discard:'Apagar envio parcial'
-});
-if(es)Object.assign(libraryWords,{
- game_download:'Descargar juego original',download:'Descargar',downloads:'Descargas',save_title:'Partidas guardadas',save_help:'Elige una carpeta y sube un ZIP o archivo. Los archivos existentes se respaldan antes de reemplazarlos.',
- save_folder:'Carpeta de partidas',save_pick:'Seleccionar ZIP o archivo de partida',save_drop:'Se detectan nombres comunes como GameData0, AutoSave y CRYSTAR*.dat',save_send:'Importar partida',
- saves_empty:'No hay archivos de partidas disponibles para este juego.',saves_none:'No hay carpetas de partidas disponibles.',save_download:'Exportar',recognized:'Reconocido',unrecognized:'Archivo',
- cheat_title:'Trucos',cheat_help:'Importa un TXT de Atmosphère o un ZIP con un único TXT. Los trucos importados empiezan desactivados.',
- cheat_pick:'Seleccionar TXT o ZIP de trucos',cheat_drop:'Solo se acepta la versión seleccionada del juego (Build ID)',cheat_send:'Importar trucos',
- data_ready:'Esperando a importar',data_validating:'Validando e importando',data_complete:'Importación completada',data_idle:'Selecciona archivos de partidas o trucos.',
- save_imported:'Partida importada; se respaldaron los archivos reemplazados.',cheat_imported:'Trucos importados y desactivados por defecto.',
- save_file:'El archivo de partida no es válido o no corresponde al juego seleccionado.',cheat_file:'El archivo de trucos no es válido o no se reconoce.',
- choose_file:'Selecciona exactamente un archivo para importar.',
- build:'El juego actual no tiene Build ID; no se pueden importar trucos de forma segura.',
- rollback:'Falló la importación y la restauración automática. No inicies el juego; la copia sigue en los datos locales de la consola.',
- changed:'El archivo cambió antes de descargarlo. Actualiza la lista de partidas.',pause:'Pausar',discard:'Eliminar envío parcial'
-});
 for(const [id,key]of [['library-title','title'],['library-intro','intro'],['library-empty','empty'],['game-back','back'],['game-warning','warning'],
- ['kind-update','update'],['kind-dlc','dlc'],['content-send','send'],['content-pick','pick_update'],['game-download','game_download'],
- ['save-title','save_title'],['save-help','save_help'],['save-folder-label','save_folder'],['save-pick','save_pick'],['save-drop','save_drop'],
- ['save-send','save_send'],['cheat-title','cheat_title'],['cheat-help','cheat_help'],['cheat-pick','cheat_pick'],['cheat-drop','cheat_drop'],
- ['cheat-send','cheat_send'],['data-pause','pause'],['data-discard','discard']])$(id).textContent=libraryWords[key];
+ ['kind-update','update'],['kind-dlc','dlc'],['content-send','send'],['content-pick','pick_update']])$(id).textContent=libraryWords[key];
 for(const [id,key]of [['content-drop','files-drop'],['content-pause','pause'],['content-discard','discard']])if(words[key])$(id).textContent=words[key];
 const libraryReason=error=>libraryWords[error.message]||words[error.message]||libraryWords.failed;
+// A game's save: downloaded as a .zip, loaded from an archive the player made anywhere. The file
+// is checked here first so a wrong one never spends an upload; the console checks it all again.
+const saveWords=pt?{
+ tab:'Save',intro:'Baixe o save deste jogo como .zip, ou carregue um feito aqui, em outro console ou no PC.',download:'Baixar save',downloaded:'Save baixado.',
+ pick:'Selecionar o save (.zip, .7z ou .rar)',drop:'ou arraste-o para cá',send:'Carregar save',choose:'Selecione o arquivo do save.',
+ warning:'Carregar substitui o save atual deste jogo. O anterior é guardado como cópia no console.',loaded:'Save carregado. Se havia um, o anterior foi guardado como cópia no console.',
+ help:'Como o arquivo deve ser?',
+ direct:'✔ Os arquivos do save direto',inside:'✔ Ou dentro da pasta do jogo',archive_name:'save.zip',file1:'arquivo do save',more:'pasta/…',
+ pc:'No PC (Eden ou yuzu): clique com o botão direito no jogo → Abrir pasta de save e comprima o que há dentro (ou a pasta inteira). Do Ryujinx serve a pasta …/bis/user/save/<número>/0.',
+ rules:'✘ Sem senha · ✘ Sem jogos nem atualizações (.nsp/.xci) · ✘ Sem saves de outros jogos · Máximo de 1 GiB.',
+ save_file:'Escolha um arquivo .zip, .7z ou .rar com o save.',save_limit:'O arquivo é grande demais para ser um save (máx. 1 GiB e 8192 arquivos).',
+ not_archive:'O arquivo não é um compactado válido (foi renomeado para .zip?).',file_empty:'O arquivo está vazio.',
+ archive:'O compactado está danificado ou incompleto. Crie-o de novo.',encrypted:'O compactado tem senha. Crie-o sem senha.',
+ empty:'O compactado não tem nenhum arquivo de save.',archive_unsafe:'O compactado tem caminhos não permitidos e não será usado: «{detail}».',
+ bad_name:'Há arquivos com nomes que o console não aceita: «{detail}». Renomeie-os.',not_save:'Isto parece um jogo ou uma atualização, não um save: «{detail}».',
+ wrong_game:'Este save é de outro jogo. Encontrado: {detail}. Esperado: a pasta {game}/ ou os arquivos direto.',
+ space:'Não há espaço livre suficiente no console.',profile:'Não há um usuário no Jadyx. Abra um jogo uma vez e tente de novo.',
+ disk:'Não foi possível guardar o save; o anterior foi mantido.',export_disk:'Não foi possível ler o save no console.',
+ no_save:'Este jogo ainda não tem save neste console.',failed:'Não foi possível carregar o save; o anterior foi mantido.'
+}:es?{
+ tab:'Partida',intro:'Descarga la partida de este juego como .zip, o carga una hecha aquí, en otra consola o en el PC.',download:'Descargar partida',downloaded:'Partida descargada.',
+ pick:'Seleccionar la partida (.zip, .7z o .rar)',drop:'o suéltala aquí',send:'Cargar partida',choose:'Selecciona el archivo de la partida.',
+ warning:'Cargar reemplaza la partida actual de este juego. La anterior se guarda como copia en la consola.',loaded:'Partida cargada. Si había una, la anterior se guardó como copia en la consola.',
+ help:'¿Cómo debe ser el archivo?',
+ direct:'✔ Los archivos de la partida directamente',inside:'✔ O dentro de la carpeta del juego',archive_name:'partida.zip',file1:'archivo de la partida',more:'carpeta/…',
+ pc:'En el PC (Eden o yuzu): clic derecho en el juego → Abrir carpeta de partida, y comprime lo que hay dentro (o la carpeta entera). De Ryujinx vale la carpeta …/bis/user/save/<número>/0.',
+ rules:'✘ Sin contraseña · ✘ Sin juegos ni actualizaciones (.nsp/.xci) · ✘ Sin partidas de otros juegos · Máximo 1 GiB.',
+ save_file:'Elige un archivo .zip, .7z o .rar con la partida.',save_limit:'El archivo es demasiado grande para ser una partida (máx. 1 GiB y 8192 archivos).',
+ not_archive:'El archivo no es un comprimido válido (¿se renombró a .zip?).',file_empty:'El archivo está vacío.',
+ archive:'El comprimido está dañado o incompleto. Vuelve a crearlo.',encrypted:'El comprimido tiene contraseña. Créalo sin contraseña.',
+ empty:'El comprimido no tiene ningún archivo de partida.',archive_unsafe:'El comprimido tiene rutas no permitidas y no se usará: «{detail}».',
+ bad_name:'Hay archivos con nombres que la consola no admite: «{detail}». Renómbralos.',not_save:'Esto parece un juego o una actualización, no una partida: «{detail}».',
+ wrong_game:'Esta partida es de otro juego. Encontrado: {detail}. Se esperaba la carpeta {game}/ o los archivos directamente.',
+ space:'No hay espacio libre suficiente en la consola.',profile:'No hay un usuario en Jadyx. Abre un juego una vez y vuelve a intentarlo.',
+ disk:'No se pudo guardar la partida; la anterior se conserva.',export_disk:'No se pudo leer la partida en la consola.',
+ no_save:'Este juego todavía no tiene partida en esta consola.',failed:'No se pudo cargar la partida; la anterior se conserva.'
+}:{
+ tab:'Save',intro:'Download this game\'s save as a .zip, or load one made here, on another console or on a PC.',download:'Download save',downloaded:'Save downloaded.',
+ pick:'Choose the save (.zip, .7z or .rar)',drop:'or drop it here',send:'Load save',choose:'Choose the save file.',
+ warning:'Loading replaces this game\'s current save. The previous one is kept as a copy on the console.',loaded:'Save loaded. If there was one, the previous save was kept as a copy on the console.',
+ help:'What should the file look like?',
+ direct:'✔ The save files directly',inside:'✔ Or inside the game\'s folder',archive_name:'save.zip',file1:'save file',more:'folder/…',
+ pc:'On a PC (Eden or yuzu): right-click the game → Open Save Data Location, and compress what is inside (or the whole folder). From Ryujinx, the …/bis/user/save/<number>/0 folder works.',
+ rules:'✘ No password · ✘ No games or updates (.nsp/.xci) · ✘ No saves of other games · 1 GiB at most.',
+ save_file:'Choose a .zip, .7z or .rar file with the save.',save_limit:'The file is too large to be a save (1 GiB and 8192 files at most).',
+ not_archive:'The file is not a valid archive (was it renamed to .zip?).',file_empty:'The file is empty.',
+ archive:'The archive is damaged or incomplete. Create it again.',encrypted:'The archive has a password. Create it without one.',
+ empty:'The archive has no save files.',archive_unsafe:'The archive has paths that are not allowed and will not be used: «{detail}».',
+ bad_name:'Some files have names the console does not accept: «{detail}». Rename them.',not_save:'This looks like a game or an update, not a save: «{detail}».',
+ wrong_game:'This save belongs to another game. Found: {detail}. Expected: the {game}/ folder or the files directly.',
+ space:'There is not enough free space on the console.',profile:'There is no user in Jadyx. Open a game once and try again.',
+ disk:'The save could not be written; the previous one was kept.',export_disk:'The save could not be read on the console.',
+ no_save:'This game has no save on this console yet.',failed:'The save could not be loaded; the previous one was kept.'};
+// The errors the guide answers: what the archive holds, not how it travelled.
+const saveStructural=['empty','not_save','wrong_game','archive_unsafe','bad_name','not_archive','save_file'];
+for(const [id,key]of [['kind-save','tab'],['save-intro','intro'],['save-download','download'],['save-pick','pick'],['save-drop','drop'],['save-send','send'],
+ ['save-warning','warning'],['save-help-toggle','help'],['save-error-help','help'],['save-pc','pc'],['save-rules','rules']])$(id).textContent=saveWords[key];
+function saveTree(){
+ const id=(gameId||'0100000000000000').toUpperCase(),w=saveWords;
+ const left=[w.direct,'  '+w.archive_name,'  ├─ '+w.file1,'  └─ '+w.more,''];
+ const right=[w.inside,'  '+w.archive_name,'  └─ '+id+'/','     ├─ '+w.file1,'     └─ '+w.more];
+ const width=Math.max(...left.map(l=>l.length))+4;
+ $('save-tree').textContent=left.map((l,i)=>l.padEnd(width)+right[i]).join('\n');
+}
+function showSaveHelp(open,flash){
+ saveTree();$('save-help').hidden=!open;
+ if(flash){$('save-help').classList.add('flash');setTimeout(()=>$('save-help').classList.remove('flash'),2000);}
+}
+// "word" or "word:detail", as the console reports it.
+function saveError(error,download){
+ const text=String(error&&error.message||error),colon=text.indexOf(':');
+ let word=colon<0?text:text.slice(0,colon);const detail=colon<0?'':text.slice(colon+1);
+ if(download&&word==='disk')word='export_disk';
+ const message=(saveWords[word]||libraryWords[word]||words[word]||saveWords.failed).replace('{detail}',detail||'?').replace('{game}',(gameId||'').toUpperCase());
+ $('save-error-text').textContent=message;$('save-error-help').hidden=!saveStructural.includes(word);$('save-error').hidden=false;
+}
+function clearSaveError(){$('save-error').hidden=true;$('save-error-text').textContent='';}
+// What the browser can tell before uploading: the name, the size and the first bytes.
+async function checkSave(file){
+ if(!/\.(zip|7z|rar)$/i.test(file.name))return 'save_file';
+ if(!file.size)return 'file_empty';
+ if(file.size>1073741824)return 'save_limit';
+ const b=new Uint8Array(await file.slice(0,8).arrayBuffer());
+ const zip=b[0]===0x50&&b[1]===0x4B&&[3,5,7].includes(b[2])&&b[3]===b[2]+1;
+ const rar=b[0]===0x52&&b[1]===0x61&&b[2]===0x72&&b[3]===0x21&&b[4]===0x1A&&b[5]===0x07;
+ const seven=b[0]===0x37&&b[1]===0x7A&&b[2]===0xBC&&b[3]===0xAF&&b[4]===0x27&&b[5]===0x1C;
+ return zip||rar||seven?'':'not_archive';
+}
 let games=[],revision=-1,libraryAt=0,gameId='',kind='update',contents=null,armed='',armedTimer=0,removalSerial=0,lastContent='';
 const covers=new Map(),gone=new Set();
 const contentTarget=()=>({key:'content',base:'/api/v1/content/uploads',tag:kind+':'+gameId,metadata:{kind,application:gameId},rate:'content-rate',eta:'content-eta'});
-const dataTarget=kind=>({
- key:'data',base:'/api/v1/data/uploads',tag:kind+':'+gameId+(kind==='save'?':'+$('save-folder').value:''),
- metadata:kind==='save'?{kind,application:gameId,folder:$('save-folder').value}:{kind,application:gameId},
- rate:'data-rate',eta:'data-eta'
-});
 function node(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text)n.textContent=text;return n;}
-let saveData=null,lastData='';
-async function loadSaves(){
- const id=gameId;if(!id)return;
- try{
-  const data=await(await api('/api/v1/library/'+id+'/saves')).json();
-  if(id===gameId){saveData=data;renderSaves();}
- }catch(error){if(id===gameId){saveData=null;$('message').textContent=libraryReason(error);renderSaves();}}
-}
-function renderSaves(){
- const select=$('save-folder');
- const previous=select.value;
- const folders=saveData?.folders||[];
- const selected=folders.some(folder=>folder.id===previous)?previous:(folders[0]?.id||'');
- select.replaceChildren(...folders.map((folder,index)=>{
-  const option=node('option','',libraryWords.save_folder+' '+(folder.label||index+1));
-  option.value=folder.id;return option;
- }));
- select.value=selected;
- select.disabled=!folders.length||libraryBusy();
- const files=(saveData?.files||[]).filter(file=>file.folder===selected);
- $('save-list').replaceChildren(...(files.length?files.map(file=>{
-  const row=node('li'),text=node('span'),button=node('button','',libraryWords.save_download);
-  text.append(node('b','',file.name),node('small','',[
-   file.recognized?libraryWords.recognized:libraryWords.unrecognized,
-   size(file.bytes),libraryWords.save_folder+' '+(folders.find(folder=>folder.id===file.folder)?.label||'')
-  ].filter(Boolean).join(' · ')));
-  button.disabled=libraryBusy();button.addEventListener('click',()=>downloadLibraryFile(
-   '/api/v1/library/'+gameId+'/saves/'+file.id+'/download'));
-  row.append(text,button);return row;
- }):[node('li','empty',folders.length?libraryWords.saves_empty:libraryWords.saves_none)]));
-}
-async function downloadLibraryFile(path){
- try{
-  const data=await(await api(path,{method:'POST'})).json();
-  if(typeof data.download!=='string'||!/^\/api\/v1\/library\/download\?ticket=[0-9a-f]{64}$/.test(data.download)||
-     typeof data.filename!=='string')throw Error('file');
-  const link=node('a');link.href=data.download;link.download=data.filename;link.hidden=true;
-  document.body.append(link);link.click();link.remove();
- }catch(error){$('message').textContent=libraryReason(error);}
-}
 // Covers come with the session header, so they are fetched once into blob URLs.
 async function cover(id,art){
  art.textContent=(games.find(g=>g.id===id)?.name||'?').slice(0,1);art.style.backgroundImage='';
@@ -675,22 +622,22 @@ async function loadContents(){
 function openGame(id,fresh){
  const game=games.find(g=>g.id===id);
  if(!game||gone.has(id)){gameId='';render();return;}
- if(fresh){gameId=id;contents=null;saveData=null;armed='';chooseKind('update');$('library-note').textContent='';
-  $('content-files').value='';$('content-picked').textContent='';$('save-files').value='';$('save-picked').textContent='';
-  $('cheat-files').value='';$('cheat-picked').textContent='';loadSaves();}
+ if(fresh){gameId=id;contents=null;armed='';chooseKind('update');$('library-note').textContent='';$('content-files').value='';$('content-picked').textContent='';
+  $('save-file').value='';$('save-picked').textContent='';clearSaveError();showSaveHelp(false);}
  $('game-name').textContent=game.name;$('game-meta').textContent=[game.developer,game.version].filter(Boolean).join(' · ');
  showCover($('game-art'),id);loadContents();render();
 }
 function chooseKind(next){
- kind=next;armed='';
- for(const k of ['update','dlc'])$('kind-'+k).ariaSelected=String(k===kind);
- $('content-pick').textContent=libraryWords['pick_'+kind];renderItems();
+ kind=next;armed='';const save=kind==='save';
+ for(const k of ['update','dlc','save'])$('kind-'+k).ariaSelected=String(k===kind);
+ $('items').hidden=save;$('content-zone').hidden=save;$('content-send').hidden=save;$('save-pane').hidden=!save;
+ if(!save)$('content-pick').textContent=libraryWords['pick_'+kind];else saveTree();
+ renderItems();
 }
 // Nothing deletes or installs while another storage job runs; the server refuses it as well.
 function libraryBusy(){
  const r=state.removal||{};
- return running||contentRunning||systemRunning||!!state.system?.busy||!!state.transfer?.busy||!!state.content?.busy||
-  !!state.data?.busy||r.phase==='pending'||r.phase==='running';
+ return running||contentRunning||systemRunning||!!state.system?.busy||!!state.transfer?.busy||!!state.content?.busy||r.phase==='pending'||r.phase==='running';
 }
 // The first press arms a deletion and the second, within six seconds, sends it.
 function arm(key){
@@ -704,7 +651,7 @@ async function remove(path,key){
  renderItems();
 }
 function renderItems(){
- if(!gameId)return;
+ if(!gameId||kind==='save')return;
  const list=(contents||[]).filter(c=>c.kind===kind),busy=libraryBusy();
  $('items').replaceChildren(...(list.length?list.map(item=>{
   const row=node('li'),text=node('span'),button=node('button','danger',armed===item.id?libraryWords.confirm:libraryWords.remove);
@@ -724,38 +671,21 @@ function renderLibrary(){
  const r=state.removal||{};
  if(r.phase==='pending'||r.phase==='running')$('library-note').textContent=libraryWords.removing;
  if(!game)return;
- const busy=libraryBusy(),s=state.content||{},install=state.install||{},installing=s.phase==='validating';
+ const busy=libraryBusy(),content=state.content||{},s=content.phase==='complete'&&!contentRunning?{}:content;
+ const install=state.install||{},installing=s.phase==='validating';
  if(busy!==lastBusy){lastBusy=busy;renderItems();}
  $('game-remove').hidden=!game.removable;$('game-remove').disabled=busy;
  $('game-remove').textContent=armed==='game'?libraryWords.confirm:libraryWords.remove_game;
  $('game-warning').textContent=game.removable?libraryWords.warning:libraryWords.external;
- $('game-download').hidden=!game.downloadable;$('game-download').disabled=busy;
- $('save-files').disabled=busy||!($('save-folder').value);
- $('cheat-files').disabled=busy;$('cheat-send').disabled=busy;
- const data=state.data||{},dataActive=!!data.id&&!['complete','failed'].includes(data.phase);
- $('save-send').disabled=busy||!gameId||!$('save-folder').value;
- $('data-pause').disabled=!dataActive||data.phase==='paused'||systemRunning;$('data-discard').disabled=!dataActive||systemRunning;
- $('save-send').textContent=libraryWords.save_send;$('cheat-send').textContent=libraryWords.cheat_send;
- const dataPhase=data.phase==='complete'?libraryWords.data_complete:
-  ['ready','validating','publishing'].includes(data.phase)?libraryWords.data_validating:
-  data.phase==='idle'?libraryWords.data_idle:libraryWords[data.phase]||words[data.phase]||libraryWords.data_idle;
- $('data-job').textContent=(data.name?data.name+'\n':'')+(data.error?libraryReason(Error(data.error)):dataPhase);
- $('data-progress').value=data.length?Math.min(1,(data.received||0)/data.length):0;
- $('data-percent').textContent=percent(data.received||0,data.length);
  const active=s.id&&!['complete','validating','publishing'].includes(s.phase);
  $('content-files').disabled=contentRunning;
  $('content-send').disabled=busy||s.available===false||['ready','validating','publishing'].includes(s.phase);
+ $('save-send').disabled=$('content-send').disabled;$('save-file').disabled=contentRunning;$('save-download').disabled=saveDownloading;
  $('content-pause').disabled=!active||systemRunning;$('content-discard').disabled=!active||systemRunning;
  $('content-job').textContent=(s.name?s.name+'\n':'')+(installing&&install.total?libraryWords.validating+' · '+install.done+' / '+install.total+' MiB':
   libraryWords[s.phase]||words[s.phase]||libraryWords.idle);
  $('content-progress').value=installing?(install.total?Math.min(1,install.done/install.total):0):s.length?Math.min(1,(s.received||0)/s.length):0;
  $('content-percent').textContent=installing?percent(install.done||0,install.total):percent(s.received||0,s.length);
-}
-function followData(){
- const data=state.data||{},phase=(data.id||'')+':'+(data.phase||'');
- if(phase===lastData)return;
- lastData=phase;
- if(data.phase==='complete'&&data.tag?.startsWith('save:'+gameId+':'))loadSaves();
 }
 // Follows this page's own deletion and installs to their end, then reloads what they changed.
 function followLibrary(){
@@ -778,38 +708,35 @@ function choosePane(next){pane=next;$('message').textContent='';if(next==='libra
 $('cat-games').addEventListener('click',()=>choosePane('games'));$('cat-library').addEventListener('click',()=>choosePane('library'));
 $('game-back').addEventListener('click',()=>{gameId='';armed='';render();});
 $('kind-update').addEventListener('click',()=>chooseKind('update'));$('kind-dlc').addEventListener('click',()=>chooseKind('dlc'));
-$('game-remove').addEventListener('click',()=>remove(gameId,'game'));
-$('game-download').addEventListener('click',()=>downloadLibraryFile('/api/v1/library/'+gameId+'/download'));
-$('content-files').addEventListener('change',()=>picked('content-picked','content-files'));
-$('save-files').addEventListener('change',()=>picked('save-picked','save-files'));
-$('cheat-files').addEventListener('change',()=>picked('cheat-picked','cheat-files'));
-$('save-folder').addEventListener('change',()=>{renderSaves();renderLibrary();});
-for(const id of ['save-files','cheat-files']){
- for(const event of ['dragenter','dragover'])$(id).addEventListener(event,e=>e.target.parentElement.classList.add('over'));
- for(const event of ['dragleave','drop'])$(id).addEventListener(event,e=>e.target.parentElement.classList.remove('over'));
-}
-$('save-send').addEventListener('click',()=>sendData('save'));
-$('cheat-send').addEventListener('click',()=>sendData('cheat'));
-$('data-pause').addEventListener('click',()=>control('pause',dataTarget(state.data?.tag?.startsWith('cheat:')?'cheat':'save')));
-$('data-discard').addEventListener('click',()=>control('discard',dataTarget(state.data?.tag?.startsWith('cheat:')?'cheat':'save')));
-async function sendData(kind){
- if(libraryBusy()||!gameId)return;
- const files=Array.from($(kind==='save'?'save-files':'cheat-files').files);
- if(files.length!==1){$('message').textContent=libraryWords.choose_file;return;}
- if(kind==='save'&&!$('save-folder').value){$('message').textContent=libraryWords.saves_none;return;}
- if(kind==='cheat'&&!/\.(txt|zip)$/i.test(files[0].name)){ $('message').textContent=libraryWords.cheat_file;return;}
- if(kind==='save'&&!/\.(zip|dat|sav|save|bin|db|sqlite|json|xml|ini)$/i.test(files[0].name)){
-  $('message').textContent=libraryWords.save_file;return;
- }
- contentRunning=true;stopped=false;rates=[];$('message').textContent='';$('library-note').textContent='';render();
+$('kind-save').addEventListener('click',()=>chooseKind('save'));
+$('save-help-toggle').addEventListener('click',()=>showSaveHelp($('save-help').hidden,false));
+$('save-error-help').addEventListener('click',()=>showSaveHelp(true,true));
+$('save-file').addEventListener('change',()=>{picked('save-picked','save-file');clearSaveError();});
+// Fetched with the session header, then handed to the browser as a file.
+$('save-download').addEventListener('click',async()=>{
+ if(!gameId||saveDownloading)return;const id=gameId;
+ saveDownloading=true;clearSaveError();$('library-note').textContent='';$('message').textContent='';render();
  try{
-  await sendFile(files[0],files[0].name,dataTarget(kind));
-  if(kind==='save'){await loadSaves();$('library-note').textContent=libraryWords.save_imported;}
-  else $('library-note').textContent=libraryWords.cheat_imported;
- }
- catch(error){$('message').textContent=libraryReason(error);}
- finally{contentRunning=false;currentXHR=null;try{await refresh();}catch{}render();}
-}
+  const blob=await(await api('/api/v1/library/'+id+'/save')).blob(),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=id.toUpperCase()+'-save.zip';document.body?.append(link);link.click();link.remove?.();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);$('library-note').textContent=saveWords.downloaded;
+ }catch(error){saveError(error,true);}finally{saveDownloading=false;render();}
+});
+$('save-send').addEventListener('click',async()=>{
+ if(libraryBusy()||!gameId)return;const file=$('save-file').files[0];clearSaveError();$('library-note').textContent='';$('message').textContent='';
+ if(!file){saveError(Error('choose'));return;}
+ const problem=await checkSave(file);if(problem){saveError(Error(problem));return;}
+ contentRunning=true;stopped=false;rates=[];const target=contentTarget();render();
+ try{await sendFile(file,file.name,target);$('library-note').textContent=saveWords.loaded;$('save-file').value='';$('save-picked').textContent='';}
+ catch(error){
+  saveError(error);
+  // A save the console refused is not resumed: it is dropped so the next file can go.
+  const s=state.content||{};
+  if(s.id&&s.error&&s.phase==='paused'&&s.tag===target.tag)try{await api(target.base+'/'+s.id,{method:'DELETE'});}catch{}
+ }finally{contentRunning=false;currentXHR=null;try{await refresh();}catch{}render();}
+});
+$('game-remove').addEventListener('click',()=>remove(gameId,'game'));
+$('content-files').addEventListener('change',()=>picked('content-picked','content-files'));
 $('content-send').addEventListener('click',async()=>{
  if(libraryBusy()||!gameId)return;const files=Array.from($('content-files').files);if(!files.length){$('message').textContent=words.choose;return;}
  contentRunning=true;stopped=false;rates=[];$('message').textContent='';$('library-note').textContent='';const target=contentTarget();render();
@@ -817,21 +744,7 @@ $('content-send').addEventListener('click',async()=>{
  catch(error){$('message').textContent=libraryReason(error);}finally{contentRunning=false;currentXHR=null;try{await refresh();}catch{}render();}
 });
 $('content-pause').addEventListener('click',()=>control('pause',contentTarget()));$('content-discard').addEventListener('click',()=>control('discard',contentTarget()));
-const systemWords=zh?{
- keysTitle:'导入密钥',firmware:'导入固件',keysHelp:'上传 ZIP 或 prod.keys / title.keys。每个密钥文件最大 4 MiB。',
- firmwareHelp:'上传 ZIP 或解压后的 NCA 文件。安装前会验证固件版本。',folder:'或选择已解压的文件夹',send:'上传并检查',confirm:'确认安装',cancel:'取消并丢弃导入内容',accept:'我已了解并接受这些警告。',
- systemTitle:'密钥与固件',systemIntro:'安装前会检查所有文件。确认前不会替换现有文件。',pick:'选择文件',drop:'或将文件拖到此处',
- installed:'已安装',selected:'所选版本',generation:'密钥代数（索引）',required:'固件所需密钥代数',ready:'文件已验证。请检查版本并确认。',review:'请检查版本并确认。',
- firmware_downgrade:'所选固件版本低于当前已安装版本。',keys_downgrade:'新密钥缺少当前密钥中已有的代数。',keys_firmware_old:'这些密钥可能无法读取当前固件。继续可能导致固件不可用。',
- keys_unknown:'无法验证密钥代数。',installed_unknown:'无法验证已安装固件。',firmware_games_removed:'固件包中发现的游戏文件已排除；只会安装固件。',
- receiving:'正在接收文件',extracting:'正在解压 ZIP',validating:'正在验证文件',prepare_pending:'等待验证',commit_pending:'等待安装',publishing:'正在安装',complete:'安装完成',failed:'导入失败；原有数据已保留。',idle:'选择要导入的文件。',
- archive:'ZIP 已损坏或不受支持。',archive_unsafe:'ZIP 包含不安全路径、链接或加密文件。',archive_limit:'文件大小或数量超出限制。',file_limit:'文件数量无效。',
- file:'请仅上传 ZIP 或对应的散文件，不要混合格式。',keys:'密钥文件无效。',keys_header:'prod.keys 中缺少有效的 header_key。',
- keys_limit:'每个密钥文件不能超过 4 MiB。',firmware_keys:'当前密钥无法读取此固件，请先导入兼容的密钥。',
- firmware_keys_newer:'此固件版本高于当前密钥。请先导入来自相同或更新固件主机的 prod.keys。',
- firmware_incomplete:'固件不完整：缺少 SystemVersion 或 MiiEdit。',firmware_game:'该内容包包含游戏文件。',firmware_duplicate:'内容包包含重复的名称或版本。',
- firmware_version:'无法验证有效的 NX 固件版本。',confirm_warnings:'请先接受警告再安装。',recovery:'无法恢复中断的导入。请丢弃后重新选择文件。'
-}:pt?{
+const systemWords=pt?{
  keysTitle:'Importar chaves',firmware:'Importar firmware',keysHelp:'ZIP ou prod.keys / title.keys. Máximo de 4 MiB por arquivo de chaves.',
  firmwareHelp:'ZIP ou arquivos NCA extraídos. A versão será verificada antes de instalar.',folder:'Ou escolha uma pasta extraída',send:'Enviar e revisar',confirm:'Confirmar instalação',cancel:'Cancelar e apagar importação',accept:'Entendo e aceito os avisos.',
  systemTitle:'Chaves e firmware',systemIntro:'Tudo é verificado antes de instalar. Os arquivos atuais ficam até você confirmar.',pick:'Selecionar arquivos',drop:'ou arraste-os para cá',
@@ -862,8 +775,9 @@ function renderSystem(){
  $('tab-system').hidden=!state.system_supported;
  if(!state.system_supported){if(!$('view-system').hidden)choose(tabs,'tab-content');return;}
  for(const kind of ['keys','firmware'])$(kind+'-send').disabled=running||systemRunning||state.transfer?.busy||!s.available||(s.busy&&s.kind!==kind)||!['idle','receiving','complete'].includes(s.phase);
- $('system-job').textContent=(systemWords[s.phase]||systemWords.idle)+(s.count?' · '+(s.completed||0)+' / '+s.count:'')+(s.error?'\n'+systemReason(Error(s.error)):'');
- const f=s.file||{};$('system-progress').value=f.length?Math.min(1,(f.received||0)/f.length):0;$('system-percent').textContent=percent(f.received||0,f.length);
+ const job=s.phase==='complete'&&!systemRunning?{}:s;
+ $('system-job').textContent=(systemWords[job.phase]||systemWords.idle)+(job.count?' · '+(job.completed||0)+' / '+job.count:'')+(job.error?'\n'+systemReason(Error(job.error)):'');
+ const f=job.file||{};$('system-progress').value=f.length?Math.min(1,(f.received||0)/f.length):0;$('system-percent').textContent=percent(f.received||0,f.length);
  $('system-review').hidden=s.phase!=='review';
  if(s.phase!=='review')systemReviewId='';
  if(s.phase==='review'){
@@ -935,10 +849,7 @@ $('system-cancel').addEventListener('click',async()=>{
 // Export logs to a file download; never fetch multi-GiB archives into a browser Blob. The
 // download starts with the export and follows it while it compresses; the link stays for a retry.
 let logsWaiting=false,logsRequesting=false;
-const logWords=zh?{title:'日志与图形捕获',help:'下载完整日志目录（包括图形捕获），并打包为 .tar.zst 文件。请让 Jadyx 保持在游戏库页面。',
- download:'压缩并下载日志',cancel:'取消',save:'保存文件',scanning:'正在准备文件…',compressing:'正在压缩并发送',ready:'压缩包已就绪。如果下载未自动开始，请点击“保存文件”。',
- cancelled:'已取消压缩。',failed:'无法准备日志，原始文件未更改。',space:'可用空间不足，无法准备压缩包。',read:'日志文件已更改或无法读取，请重试。',saving:'正在开始下载…'}
-:pt?{title:'Logs e capturas',help:'Baixe toda a pasta de logs, incluindo as capturas gráficas, em um arquivo comprimido .tar.zst. Mantenha o Jadyx na biblioteca.',
+const logWords=pt?{title:'Logs e capturas',help:'Baixe toda a pasta de logs, incluindo as capturas gráficas, em um arquivo comprimido .tar.zst. Mantenha o Jadyx na biblioteca.',
  download:'Comprimir e baixar logs',cancel:'Cancelar',save:'Salvar arquivo',scanning:'Preparando arquivos…',compressing:'Comprimindo e enviando',ready:'Arquivo pronto. Se o download não começar, clique em Salvar arquivo.',cancelled:'Compressão cancelada.',failed:'Não foi possível preparar os logs. Os originais foram preservados.',space:'Não há espaço livre suficiente para preparar o arquivo.',read:'Um arquivo de log mudou ou não pôde ser lido. Tente novamente.',saving:'Iniciando download…'}:es?{
  title:'Logs y capturas',help:'Descarga toda la carpeta de logs, incluidas las capturas gráficas, en un archivo comprimido .tar.zst. Mantén Jadyx en la biblioteca.',
  download:'Comprimir y descargar logs',cancel:'Cancelar',save:'Guardar archivo',scanning:'Preparando archivos…',compressing:'Comprimiendo y enviando',ready:'Archivo listo. Si no empieza la descarga, pulsa Guardar archivo.',cancelled:'Compresión cancelada.',failed:'No se pudieron preparar los logs. Los originales se conservan.',space:'No hay espacio libre suficiente para preparar el archivo.',read:'Un archivo de log cambió o no se pudo leer. Vuelve a intentarlo.',saving:'Iniciando descarga…'}:{
@@ -984,15 +895,7 @@ $('logs-cancel').addEventListener('click',async()=>{
 // Guided app update: while Jadyx offers one, the page opens on its steps. The ticket is fetched
 // ahead of the click (it lives two minutes and serves once) so the download and the Device Portal
 // tab both start inside the click, where browsers still allow opening a tab.
-const uw=zh?{kicker:'Jadyx 更新',title:'更新 Jadyx',preparing:'正在准备已验证的软件包…',verified:'签名验证通过',
- s1:'连接浏览器',s1b:'已完成：此浏览器已连接到主机。',s2:'下载并安装',s2b:'软件包将会下载，并在新标签页中打开 Xbox Device Portal。',
- go:'下载并安装',again:'重新下载',s3:'在 Device Portal 中完成安装',
- s3b:'如果出现证书警告，请选择“高级”→“继续”。然后选择 Add → 选中已下载文件 → Next → Install。',portal:'打开 Device Portal',
- keep:'请勿卸载 Jadyx，否则会删除存档和设置。请直接覆盖安装。',skip:'返回内容页面',
- installing:'正在安装更新',installingb:'Jadyx 已关闭以便安装。Device Portal 完成后，请在主机上重新打开应用以确认新版本。',
- reconnect:'重新连接',banner:'Jadyx 更新已就绪',bannerb:'请通过 Xbox Device Portal 覆盖安装。',open:'查看步骤',
- busy:'请等待当前传输完成。',verify_in_app:'请在主机的“更新”页面重新验证软件包。',failed:'无法准备软件包，请重试。'}
-:pt?{kicker:'Atualização do Jadyx',title:'Atualizar Jadyx',preparing:'Preparando o pacote verificado…',verified:'Assinatura verificada',
+const uw=pt?{kicker:'Atualização do Jadyx',title:'Atualizar Jadyx',preparing:'Preparando o pacote verificado…',verified:'Assinatura verificada',
  s1:'Conecte o navegador',s1b:'Feito: este navegador está conectado ao console.',s2:'Baixe e instale',s2b:'O pacote é baixado e o Xbox Device Portal se abre em outra aba.',
  go:'Baixar e instalar',again:'Baixar de novo',s3:'Conclua no Device Portal',
  s3b:'Se aparecer um aviso de certificado, escolha Avançado → Continuar. Depois Add → escolha o arquivo baixado → Next → Install.',portal:'Abrir Device Portal',

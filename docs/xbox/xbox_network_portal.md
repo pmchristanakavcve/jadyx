@@ -1,22 +1,15 @@
 # Portal local de importación
 
-## Estado actual: acceso directo
+## Estado actual: portal original restaurado
 
-El portal web ahora abre directamente la interfaz principal: no requiere ni muestra
-códigos de conexión. Al responder GET /, el servidor crea o reutiliza un token de
-sesión aleatorio de 256 bits y lo inyecta en el HTML; la página consulta el estado y
-reanuda el polling automáticamente si falla la primera consulta. El código local y
-POST /api/v1/pair quedan como compatibilidad heredada, pero la interfaz actual no los
-usa. Tras detener/reiniciar el portal hay que abrir de nuevo la URL.
+La interfaz web y el flujo de conexión se restauraron desde la rama `main` del
+repositorio original `JulianDr14/jadyx`, commit `cf4ad1c192ae`.
+Al abrir la dirección se muestra el formulario de código; al introducir el código de
+4 dígitos, el navegador empareja y abre el portal. La Xbox vuelve a mostrar el código
+en Ajustes y permite regenerarlo. El número de paquete es `0.3.10.7`.
 
-El token de sesión se entrega al navegador al abrir el portal; el usuario no introduce
-ningún código.
-
-La página de pairing eliminada aún intentaba traducir IDs `kicker` y `code-hint`, que
-ya no existían en el HTML. El acceso a `textContent` sobre esos elementos nulos detenía
-el script antes del primer status request, por lo que el navegador conservaba los textos
-estáticos en inglés y «Not connected». Se quitaron esos destinos obsoletos, se agregó el
-ID de Firmware que faltaba y el test ahora comprueba que todos los IDs localizados existen.
+Se conservan los cambios locales de biblioteca/API que no afectan a la interfaz original
+del portal, incluidos el importador de guardados y las herramientas adicionales.
 
 ## Historial: 19 octubre 2026
 
@@ -116,18 +109,9 @@ antes de jugar/suspender/salir; snapshots protegidos por mutex. Inicio/parada/re
 serializados. Capacidad privateNetworkClientServer, internetClient conservada. Se
 liga IPv4 concreta RFC1918/link-local, puerto8080, uso exclusivo. GetAdaptersAddresses
 enumera Ethernet/Wi-Fi operativas con gateway primero; no se usa NetworkInformation,
-limitado en Xbox. Solo los gates admiten loopback. Conexión/emparejamiento LAN Series
-confirmados históricamente por el usuario; el pairing fue eliminado de la interfaz web
-en esta actualización. GET / inyecta una sesión aleatoria de 256 bits y la página consulta
-el estado sin pedir código. El código local/API queda solo por compatibilidad heredada.
-
-Al detener la app, la sesión deja de ser válida. El HTML se sirve con `Cache-Control:
-no-store`.
-
-El problema histórico de la fila de código fuera del área visible motivó inicialmente
-una pantalla completa. Esa pantalla ahora muestra estado y acceso directo; ya no presenta
-código ni acción para generarlo. Mantiene Volver/Detener y navegación de mando/teclado.
-La pantalla añade recepción/progreso del NSP.
+limitado en Xbox. Solo los gates admiten loopback. El emparejamiento original usa un
+código numérico de cuatro dígitos, válido durante cinco minutos. La sesión web se crea
+al validar el código y se invalida al detener/reiniciar el portal.
 
 ## Contrato HTTP
 
@@ -135,8 +119,8 @@ Cuatro workers/cola8, keepalive2s/10000requests, TCP_NODELAY. No buffers TCP gig
 ni cambios al autotuning. Pairing≤1024bytes, controles≤4096, PATCH≤64MiB; no aceptar
 Transfer-Encoding ni Content-Encoding. Ids aleatorios32hex y destinos decididos por servidor.
 
-- GET /: HTML/CSS/JS locales y sesión de 256 bits inyectada para acceso directo.
-- POST /api/v1/pair: endpoint heredado de compatibilidad; no se usa en la página actual.
+- GET /: HTML/CSS/JS locales es/en/pt-BR.
+- POST /api/v1/pair: valida el código de cuatro dígitos y entrega una sesión Bearer.
 - GET /api/v1/status: Bearer, stage=nsp, uploads=true, snapshot de transferencia/espacio.
 - OPTIONS/POST /api/v1/uploads: tus1.0 creation; Upload-Length y Upload-Metadata con
   filename/fingerprint Base64 de texto (nunca Base64 del juego).
@@ -155,7 +139,7 @@ al preparar almacenamiento hace fallar Start de forma controlada. No tumbar la a
 Browser usa Blob.slice y bloques16MiB; una subida activa y cola. Progreso recibido y
 confirmado separados, velocidad de los últimos8 bloques confirmados y ETA de recepción
 (sin validación). Reintenta cortes consultando HEAD. Pausa, elimina parcial o renombra.
-Después de reiniciar app/browser: abrir de nuevo la URL y seleccionar el mismo archivo
+Después de reiniciar app/browser: emparejar de nuevo y seleccionar el mismo archivo
 para reanudar.
 
 Servidor agrupa recv pequeños en buffer1MiB y WriteFile secuencial. FlushFileBuffers

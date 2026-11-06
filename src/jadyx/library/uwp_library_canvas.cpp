@@ -1233,7 +1233,8 @@ private:
             rows.push_back(std::move(address));
             rows.push_back({Kind::Open, std::wstring{Tr(T::NetworkCode)},
                 std::wstring{Tr(!network.running ? T::NetworkStopped : network.paired ? T::NetworkPaired :
-                    T::NetworkCodeHint)}});
+                    network.code_expired ? T::NetworkCodeExpired : T::NetworkCodeHint)},
+                network.running && !network.code_expired ? std::wstring{winrt::to_hstring(network.code)} : std::wstring{L"—"}});
             for (const auto& source : status.sources)
                 rows.push_back({Kind::Open, I18n::Format(T::RemoveFolder, {source.name})});
         }
@@ -1245,8 +1246,14 @@ private:
     static constexpr float SettingsPaneWidth = 1280 - LibraryLayout::Margin - SettingsPaneX;
     static constexpr float SettingsRowsTop = 226, SettingsRowStride = 58, SettingsRowHeight = 52;
     static constexpr std::size_t SettingsVisibleRows = 7;
-    /// The portal screen, laid out like the update page: direct access details at the left and
-    /// the portal status/stop actions at the right.
+    /// The code spaced out so it reads at a distance, as the browser asks for it.
+    static std::wstring PortalDigits(const std::string& code) {
+        std::wstring digits;
+        for (const char c : code) { if (!digits.empty()) digits += L"  "; digits += static_cast<wchar_t>(c); }
+        return digits;
+    }
+    /// The portal screen, laid out like the update page: the address and the code in the card at
+    /// the left, the two actions as rows at the right with the focused one explained underneath.
     void DrawNetworkConnection(const ConfigurationPanel& configuration) {
         using namespace LibraryLayout;
         const auto& network = configuration.network;
@@ -1257,8 +1264,17 @@ private:
         Type(winrt::to_hstring(network.url).c_str(), TypeRole::HeadlineMedium, inner, card_y + 50, inner_w, Palette::Text);
         Round(inner, card_y + 106, inner_w, 1, 0.5f, Palette::Graphite);
         Type(Upper(Tr(T::NetworkCodeLabel)), TypeRole::Caps, inner, card_y + 128, inner_w, Palette::TextSecondary);
-        Type(Tr(!network.running ? T::NetworkStopped : network.paired ? T::NetworkPaired : T::NetworkCodeExpired),
-             TypeRole::HeadlineMedium, inner, card_y + 180, inner_w, Palette::Text, 1, TextAlign::Center);
+        if (network.running && !network.code_expired && network.code.size() == 4) {
+            D2D1_MATRIX_3X2_F transform;
+            target->GetTransform(&transform);
+            const float center = card_x + card_w / 2, top = card_y + 156;
+            target->SetTransform(D2D1::Matrix3x2F::Scale(1.5f, 1.5f, D2D1::Point2F(center, top)) * transform);
+            Type(PortalDigits(network.code), TypeRole::Hero, inner, top, inner_w, Palette::Text, 1, TextAlign::Center);
+            target->SetTransform(transform);
+        } else {
+            Type(Tr(network.paired ? T::NetworkPaired : T::NetworkCodeExpired), TypeRole::HeadlineMedium, inner,
+                 card_y + 180, inner_w, Palette::Text, 1, TextAlign::Center);
+        }
         const bool problem = !configuration.notice.empty();
         Type(problem ? std::wstring_view{configuration.notice} : Tr(T::NetworkCodeHint), TypeRole::Body, inner,
              card_y + 270, inner_w, problem ? Palette::Warning : Palette::TextSecondary, 1, TextAlign::Center, 2);
@@ -1339,7 +1355,7 @@ private:
         }
         Type(I18n::Format(T::UpdateGuideTitle, {incoming}), TypeRole::HeadlineLarge, 80, 96, 1120, Palette::Text);
         Type(Tr(T::UpdateGuideIntro), TypeRole::BodyLarge, 80, 150, 1120, Palette::TextSecondary);
-        // The address and direct-access status.
+        // The address and the code, drawn as large as the portal screen draws them.
         constexpr float card_x = 80, card_y = 200, card_w = 560, card_h = 330, inner = card_x + 28, inner_w = card_w - 56;
         Card(card_x, card_y, card_w, card_h, 20);
         Type(Upper(Tr(T::UpdateGuideAddress)), TypeRole::Caps, inner, card_y + 24, inner_w, Palette::TextSecondary);
@@ -1347,8 +1363,18 @@ private:
         Type(url, TypeRole::HeadlineMedium, inner, card_y + 50, inner_w, Palette::Text);
         Round(inner, card_y + 106, inner_w, 1, 0.5f, Palette::Graphite);
         Type(Upper(Tr(T::NetworkCodeLabel)), TypeRole::Caps, inner, card_y + 128, inner_w, Palette::TextSecondary);
-        Type(Tr(network.paired ? T::NetworkPaired : network.running ? T::NetworkCodeExpired : T::NetworkStopped),
-             TypeRole::HeadlineMedium, inner, card_y + 180, inner_w, Palette::Text, 1, TextAlign::Center);
+        const bool code = network.running && !network.code_expired && network.code.size() == 4;
+        if (code) {
+            D2D1_MATRIX_3X2_F transform;
+            target->GetTransform(&transform);
+            const float center = card_x + card_w / 2, top = card_y + 156;
+            target->SetTransform(D2D1::Matrix3x2F::Scale(1.5f, 1.5f, D2D1::Point2F(center, top)) * transform);
+            Type(PortalDigits(network.code), TypeRole::Hero, inner, top, inner_w, Palette::Text, 1, TextAlign::Center);
+            target->SetTransform(transform);
+        } else {
+            Type(Tr(network.paired ? T::NetworkPaired : network.running ? T::NetworkCodeExpired : T::NetworkStopped),
+                 TypeRole::HeadlineMedium, inner, card_y + 180, inner_w, Palette::Text, 1, TextAlign::Center);
+        }
         const bool problem = !configuration.notice.empty();
         Type(problem ? std::wstring_view{configuration.notice} : Tr(T::NetworkCodeHint), TypeRole::Body, inner,
              card_y + 270, inner_w, problem ? Palette::Warning : Palette::TextSecondary, 1, TextAlign::Center, 2);

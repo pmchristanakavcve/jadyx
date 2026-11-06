@@ -80,7 +80,7 @@ bool LibrarySession::StartPortal() {
 void LibrarySession::OpenUpdateGuide() {
     updater.RecordAssistedRequest();
     if (!network_portal.Status().running) StartPortal();
-    else configuration.notice.clear();
+    else configuration.notice = network_portal.RenewCode() ? std::wstring{} : std::wstring{Tr(T::NetworkStartFailed)};
     configuration.network = network_portal.Status();
     configuration.network_screen = configuration.network_update = true;
     configuration.network_action = 0;

@@ -312,6 +312,8 @@ void LibrarySession::ActivateFilesRow() {
         configuration.notice.clear();
     }
     else if (configuration.selected == FilesNetworkCode) {
+        if (!network_portal.RenewCode()) configuration.notice = Tr(T::NetworkStopped);
+        else configuration.notice.clear();
         configuration.network = network_portal.Status();
         configuration.network_screen = configuration.network.running;
         configuration.network_action = 1;

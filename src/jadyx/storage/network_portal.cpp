@@ -578,27 +578,8 @@ struct NetworkPortal::Impl {
             }
             return httplib::Server::HandlerResponse::Unhandled;
         });
-        server->Get("/", [this](const auto&, auto& response) {
-            std::string page{PortalWeb::Page};
-            constexpr std::string_view session_marker = "__JADYX_PORTAL_SESSION__";
-            const auto marker = page.find(session_marker);
-            if (marker == std::string::npos) {
-                Reply(response, 500, {{"error", "page"}});
-                return;
-            }
-            std::string token;
-            {
-                std::lock_guard lock{mutex};
-                if (session.empty()) session = RandomSession();
-                if (session.empty()) {
-                    Reply(response, 503, {{"error", "random"}});
-                    return;
-                }
-                status.paired = true;
-                token = session;
-            }
-            page.replace(marker, session_marker.size(), token);
-            response.set_content(page, "text/html; charset=utf-8");
+        server->Get("/", [](const auto&, auto& response) {
+            response.set_content(PortalWeb::Page.data(), PortalWeb::Page.size(), "text/html; charset=utf-8");
         });
         server->Get("/logo.png", [](const auto&, auto& response) {
             response.set_content(reinterpret_cast<const char*>(PortalWeb::Logo), PortalWeb::LogoSize, "image/png");
