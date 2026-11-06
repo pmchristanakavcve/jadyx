@@ -7,6 +7,8 @@ const script=header.match(/<script>([\s\S]*?)<\/script>/)[1].replace("'__JADYX_P
 new vm.Script(script,{filename:'network-portal-page.js'});
 assert.doesNotMatch(header,/body:has\(#pair\[hidden\]\)/,'portal view state must not depend on CSS :has support');
 assert.doesNotMatch(header,/<form id="pair">|id="code"|id="connect"/,'portal must open without a pairing form');
+assert.match(header,/<body class="paired">/,'server-issued session is reflected in the initial page state');
+assert.match(header,/<section id="upload" class="card">/,'upload UI is visible before JavaScript status initialization');
 assert.match(header,/<div class="app" id="app">/);
 assert.match(header,/let session='__JADYX_PORTAL_SESSION__'/,'server injects the session into the main page');
 // /logo.png serves the app's controller logo; its embedded bytes must match the packaged asset.
@@ -45,6 +47,7 @@ for(const size of [0,3,55,56,63,64,65,128,131072]){
  console.log('PASS: browser library, save/cheat import, ticketed export/download, updates and game deletion (mock HTTP)');
  await browserScenario({initialStatusFailure:true,language:'zh-CN'});
  await browserScenario({pollSessionLost:true,language:'zh-CN'});
+ await browserScenario({storageUnavailable:true});
  console.log('PASS: direct portal entry without code, initial status retry and session-loss reporting');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
@@ -62,6 +65,7 @@ async function browserScenario(options){
  let job={id:'',phase:'idle',offset:0,received:0,length:0,free_bytes:80*1024**3,available:true,busy:false,error:''};
  let writes=0,lost=false,controlPromise,context,statusRequests=0,pollCallback;const completed=[];
  const bodyClasses=new Set();
+ bodyClasses.add('paired');
  const response=(status,json={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(json)),
   headers:{get:key=>Object.entries(headers).find(([name])=>name.toLowerCase()===key.toLowerCase())?.[1]??null}});
  const fetch=async(url,request={})=>{
@@ -108,13 +112,19 @@ async function browserScenario(options){
  }}},navigator:{language:'es'},
   location:{search:'?chunk='+(options.chunk||16)},URLSearchParams,TextEncoder,Uint8Array,Uint32Array,DataView,
   performance,XMLHttpRequest:XHR,fetch,btoa:value=>Buffer.from(value,'binary').toString('base64'),
-  localStorage:{getItem:()=>options.language||'es',setItem(){}},
+  localStorage:options.storageUnavailable?{getItem(){throw Error('storage disabled');},setItem(){throw Error('storage disabled');}}:
+   {getItem:()=>options.language||'es',setItem(){}},
   setTimeout:callback=>{queueMicrotask(callback);return 1;},setInterval:callback=>{pollCallback=callback;return 1;},clearInterval:()=>{},selected});
  vm.runInContext(script,context);
  await vm.runInContext('portalReady',context);
  assert.equal(statusRequests,1,'opening the page requests status without pairing');
  assert.equal(element('upload').hidden,false,'opening the page reveals the upload interface');
- assert.equal(bodyClasses.has('paired'),!options.initialStatusFailure,'direct entry reflects whether status loaded');
+ assert.equal(bodyClasses.has('paired'),true,'server-issued session displays a connected state immediately');
+ if(options.storageUnavailable){
+  assert.equal(element('content-kicker').textContent,'导入','blocked browser storage falls back to Chinese UI');
+  assert.equal(element('cat-games-title').textContent,'游戏');
+  assert.equal(element('uploadtitle').textContent,'导入游戏');
+ }
  element('app').hidden=true;
  if(options.resume||options.different){
   const signature=await vm.runInContext('fingerprint(selected)',context);
@@ -123,7 +133,7 @@ async function browserScenario(options){
  }
  if(options.initialStatusFailure){
   assert.notEqual(element('message').textContent,'','initial status failure is shown');
-  assert.equal(bodyClasses.has('paired'),false,'failed status does not show a connected state');
+  assert.equal(bodyClasses.has('paired'),true,'status retry does not remove the injected session state');
   await pollCallback();
   assert.equal(statusRequests,2);
   assert.equal(element('message').textContent,'','polling recovers without pairing');

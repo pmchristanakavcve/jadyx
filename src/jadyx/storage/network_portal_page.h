@@ -9,7 +9,7 @@ namespace Jadyx::PortalWeb {
 // Jadyx::Palette; the only colour is the logo's. The CSP allows images from the portal itself
 // (/logo.png) and nothing external, so icons are inline SVG.
 inline constexpr std::string_view Page=R"HTML(<!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08090b"><link rel="icon" href="/logo.png"><title>Jadyx Portal</title><style>
 :root{color-scheme:dark;--canvas:#08090b;--surface:#111315;--row:#16181b;--graphite:#1c1f23;--active:#26282b;--text:#f5f5f7;--muted:#92959a;--hint:#b4b7bb;
  --warn:#f0c27a;--cyan:#2eb5e5;--crimson:#e02b41;--line:rgba(255,255,255,.08);--field:#2a2d31;
@@ -154,9 +154,9 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 @media(max-width:420px){.brand img{width:36px;height:36px}.word{font-size:16px;letter-spacing:.3em}.caps,.link span{display:none}.link{padding:0 11px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<body><header class="bar"><div class="brand"><img src="/logo.png" alt="Jadyx" width="44" height="44"><span class="word">JADYX</span><span class="caps">Portal</span></div>
+<body class="paired"><header class="bar"><div class="brand"><img src="/logo.png" alt="Jadyx" width="44" height="44"><span class="word">JADYX</span><span class="caps">本地网络传送门</span></div>
 <nav class="tabs" role="tablist"><button id="tab-content" role="tab" aria-selected="true">Content</button><button id="tab-system" role="tab" aria-selected="false">System</button></nav>
-<span class="link" role="status"><i></i><span class="status-off" id="status-off">Not connected</span><span class="status-on" id="status-on">Connected</span></span>
+<span class="link" role="status"><i></i><span class="status-off" id="status-off">未连接</span><span class="status-on" id="status-on">已连接</span></span>
 <select class="language" id="language" aria-label="Language"><option value="zh-CN">简体中文</option><option value="en">English</option><option value="es">Español</option><option value="pt-BR">Português</option></select></header>
 <div class="shell"><p id="message" role="alert"></p>
 <div class="app" id="app">
@@ -172,13 +172,13 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 <div class="installing" id="update-installing" hidden><div class="spin"></div><h2 id="update-installing-title">Installing the update</h2><p id="update-installing-body"></p>
 <button id="update-reconnect">Connect again</button></div>
 <p class="keep" id="update-keep"></p><div class="update-foot"><button class="back" id="update-skip">Go to content</button></div></section>
-<div class="view" id="view-content"><nav class="cats"><p class="kicker" id="content-kicker">Install</p>
+<div class="view" id="view-content"><nav class="cats"><p class="kicker" id="content-kicker">导入</p>
 <button class="cat" id="cat-games" aria-selected="true"><svg class="ico" viewBox="0 0 24 24"><path d="M6.5 8h11a4 4 0 0 1 3.9 4.9l-1 4.4a2.4 2.4 0 0 1-4.2 1L14.5 16h-5l-1.7 2.3a2.4 2.4 0 0 1-4.2-1l-1-4.4A4 4 0 0 1 6.5 8z"/><path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 14h.01"/></svg>
-<span><b id="cat-games-title">Games</b><small id="cat-games-sub">NSP · XCI · NRO · base game</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+<span><b id="cat-games-title">游戏</b><small id="cat-games-sub">NSP · XCI · NRO · 基础游戏</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
 <button class="cat" id="cat-library" aria-selected="false" hidden><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
 <span><b id="cat-library-title">Library</b><small id="cat-library-sub">Updates · DLC · delete</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
 <div class="store"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M5 13 7.5 5h9L19 13M7 16.5h.01"/></svg><span id="space"></span></div></nav>
-<section id="upload" class="card" hidden><div class="head"><h2 id="uploadtitle">Import games</h2><p id="uploadintro">Base games only. Choose where your console keeps them.</p></div>
+<section id="upload" class="card"><div class="head"><h2 id="uploadtitle">导入游戏</h2><p id="uploadintro">仅支持基础游戏。请选择主机上的保存位置。</p></div>
 <nav class="seg" id="where" role="tablist" hidden><button id="where-internal" role="tab" aria-selected="true">Internal storage</button><button id="where-developer" role="tab" aria-selected="false">Dev storage (D:)</button></nav>
 <label class="drop" id="files-zone"><input id="files" type="file" accept=".nsp,.xci,.nro" multiple><svg class="ico" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
 <strong id="fileslabel">Choose NSP, XCI or NRO files</strong><span id="files-drop">or drop them here</span><span class="picked" id="files-picked"></span></label>
@@ -244,11 +244,12 @@ a.pill{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px
 <script>
 'use strict';
 const $=id=>document.getElementById(id),availableLanguages=['zh-CN','en','es','pt-BR'];
-const savedLanguage=typeof localStorage==='undefined'?'':localStorage.getItem('jadyx-portal-language');
+let savedLanguage='';
+try{savedLanguage=localStorage.getItem('jadyx-portal-language')||'';}catch{}
 const language=availableLanguages.includes(savedLanguage)?savedLanguage:'zh-CN';
 const zh=language==='zh-CN',es=language==='es',pt=language==='pt-BR';
 $('language').value=language;
-$('language').addEventListener('change',()=>{if(typeof localStorage!=='undefined')localStorage.setItem('jadyx-portal-language',$('language').value);location.reload();});
+$('language').addEventListener('change',()=>{try{localStorage.setItem('jadyx-portal-language',$('language').value);}catch{}location.reload();});
 const words=zh?{
  title:'连接到主机',intro:'输入 Jadyx 中显示的临时验证码，并保持应用停留在游戏库页面。',label:'连接验证码',connect:'连接',
  uploadtitle:'导入游戏',uploadintro:'仅支持基础游戏。请选择主机保存游戏的位置。','where-internal':'内部存储','where-developer':'开发者存储（D:）',

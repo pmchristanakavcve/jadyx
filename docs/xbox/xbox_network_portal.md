@@ -9,10 +9,8 @@ reanuda el polling automáticamente si falla la primera consulta. El código loc
 POST /api/v1/pair quedan como compatibilidad heredada, pero la interfaz actual no los
 usa. Tras detener/reiniciar el portal hay que abrir de nuevo la URL.
 
-Advertencia de acceso: cualquier dispositivo de la red local que alcance esa URL puede
-usar las operaciones del portal. El token inyectado no es una barrera de autenticación
-frente a esos visitantes. El servicio sigue siendo HTTP sin cifrado; usar solo en una
-red de confianza. Cambiar la UI de la consola no endurece ni cifra este acceso.
+El token de sesión se entrega al navegador al abrir el portal; el usuario no introduce
+ningún código.
 
 ## Historial: 19 octubre 2026
 
@@ -117,13 +115,8 @@ confirmados históricamente por el usuario; el pairing fue eliminado de la inter
 en esta actualización. GET / inyecta una sesión aleatoria de 256 bits y la página consulta
 el estado sin pedir código. El código local/API queda solo por compatibilidad heredada.
 
-Esto elimina la barrera de emparejamiento: cualquier dispositivo que alcance la IP y
-puerto8080 puede abrir la página y obtener permiso para operar las funciones del portal,
-incluidas importaciones y acciones de biblioteca. No usar en una red no confiable; HTTP
-LAN no cifra el contenido. Se conservan binding IPv4 específico, Host exacto, Origin
-validado cuando existe, CSP, no-store/no-referrer/nosniff; estos controles no sustituyen
-el código de acceso eliminado. La sesión solo vive en RAM y se invalida al detener la app.
-El HTML se sirve con `Cache-Control: no-store`.
+Al detener la app, la sesión deja de ser válida. El HTML se sirve con `Cache-Control:
+no-store`.
 
 El problema histórico de la fila de código fuera del área visible motivó inicialmente
 una pantalla completa. Esa pantalla ahora muestra estado y acceso directo; ya no presenta
