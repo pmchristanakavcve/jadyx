@@ -26,15 +26,15 @@ p,small{color:var(--muted)}svg{flex:none}
 .brand{display:flex;align-items:center;gap:12px;min-width:0}.brand img{width:44px;height:44px}
 .word{font-size:19px;font-weight:600;letter-spacing:.42em;white-space:nowrap}
 .caps{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding-left:12px;border-left:1px solid rgba(255,255,255,.18)}
-.tabs{display:none;padding:4px;border-radius:999px;background:rgba(28,31,35,.78);border:1px solid rgba(255,255,255,.12)}body:has(#pair[hidden]) .tabs{display:flex}
+.tabs{display:none;padding:4px;border-radius:999px;background:rgba(28,31,35,.78);border:1px solid rgba(255,255,255,.12)}body.paired .tabs{display:flex}
 .tabs button{height:36px;padding:0 24px;border:0;background:none;color:var(--muted)}.tabs button:hover:not(:disabled){background:none;color:var(--text)}
 .tabs button[aria-selected=true],.tabs button[aria-selected=true]:hover{background:var(--text);color:var(--canvas)}
 .link{justify-self:end;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);
  font-size:13px;font-weight:600;color:var(--hint);white-space:nowrap}
 .link i{width:8px;height:8px;border-radius:50%;background:var(--muted)}.status-on{display:none}
 .language{justify-self:end;height:34px;padding:0 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--hint);font:inherit;font-size:13px}
-body:has(#pair[hidden]) .link i{background:var(--cyan);box-shadow:0 0 0 3px rgba(46,181,229,.22)}
-body:has(#pair[hidden]) .status-off{display:none}body:has(#pair[hidden]) .status-on{display:inline}
+body.paired .link i{background:var(--cyan);box-shadow:0 0 0 3px rgba(46,181,229,.22)}
+body.paired .status-off{display:none}body.paired .status-on{display:inline}
 .shell{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:36px 40px 48px}
 .kicker{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 #message{position:sticky;top:92px;z-index:5;margin-bottom:24px;padding:14px 16px;border-radius:14px;color:var(--warn);background:rgba(28,24,16,.94);
@@ -49,7 +49,7 @@ body:has(#pair[hidden]) .status-off{display:none}body:has(#pair[hidden]) .status
 #code::placeholder{color:#3a3d42}#code:focus{border-color:var(--text);outline:none;box-shadow:0 0 0 6px rgba(255,255,255,.08)}
 #connect{width:100%;height:52px;margin-top:14px}.hint{font-size:13px;margin-top:12px}
 #connection{margin-top:16px;font-size:14px;color:var(--hint)}#connection:empty{display:none}
-.app{display:none}body:has(#pair[hidden]) .app{display:block}body:has(#pair[hidden]) .gate{display:none}
+.app{display:none}body.paired .app{display:block}body.paired .gate{display:none}
 .view{display:grid;grid-template-columns:288px minmax(0,1fr);gap:32px;align-items:start}
 .cats{position:sticky;top:116px;display:flex;flex-direction:column;gap:6px}.cats .kicker{margin:0 0 10px 16px}
 button.cat{display:flex;align-items:center;gap:14px;width:100%;height:auto;min-height:64px;padding:10px 16px;border-radius:14px;background:none;border-color:transparent;
@@ -389,12 +389,12 @@ $('pair').addEventListener('submit',async event=>{
   if(typeof paired.session!=='string'||!/^[0-9a-f]{64}$/.test(paired.session)){$('connection').textContent=words.pairUnavailable;return;}
   session=paired.session;
  }
- await refresh();$('code').value='';$('pair').hidden=true;$('connection').textContent=words.ok;
+ await refresh();$('code').value='';$('pair').hidden=true;document.body.classList.add('paired');$('connection').textContent=words.ok;
  clearInterval(timer);let polling=false;
  timer=setInterval(async()=>{if(polling)return;polling=true;try{await refresh();failures=0;$('connection').textContent=words.ok;}catch(error){
  // After the package went to Device Portal, the console going away is the install closing Jadyx.
  if(updateStarted&&(error.message==='lost'||++failures>=3)){clearInterval(timer);session='';updateGone=true;renderUpdate();}
- else if(error.message==='lost'){clearInterval(timer);stopped=true;if(currentXHR)currentXHR.abort();session='';$('pair').hidden=false;$('upload').hidden=true;$('connection').textContent=words.lost;}
+ else if(error.message==='lost'){clearInterval(timer);stopped=true;if(currentXHR)currentXHR.abort();session='';$('pair').hidden=false;document.body.classList.remove('paired');$('upload').hidden=true;$('connection').textContent=words.lost;}
  else $('connection').textContent=words.interrupted;
  }finally{polling=false;}},1000);
  }catch(error){if(error.message==='lost')session='';$('connection').textContent=error.message==='lost'?words.lost:words.network;}finally{$('connect').disabled=false;}

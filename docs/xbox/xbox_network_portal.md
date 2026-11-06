@@ -111,6 +111,9 @@ Si esa consulta falla, conserva el código y permite reintentar con la sesión y
 sin volver a consumir el código. Los errores de emparejamiento distinguen código caducado,
 dirección/Origin incorrecto, límite de intentos, portal no disponible y fallo de red;
 los mensajes están traducidos en zh/en/es/pt-BR.
+La transición al portal emparejado usa una clase explícita del documento, no CSS `:has()`;
+así los navegadores móviles sin ese selector tampoco se quedan en la pantalla de conexión
+después de aceptar el código.
 
 El usuario no veía el código: fila8 fuera de7 filas visibles. Iniciar ahora abre página
 completa: URL, código112px agrupado4+4, Volver/Generar/Detener, mando/teclado/puntero con
