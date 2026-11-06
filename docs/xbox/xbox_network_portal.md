@@ -1,6 +1,20 @@
 # Portal local de importación
 
-## Estado: 19 octubre 2026
+## Estado actual: acceso directo
+
+El portal web ahora abre directamente la interfaz principal: no requiere ni muestra
+códigos de conexión. Al responder GET /, el servidor crea o reutiliza un token de
+sesión aleatorio de 256 bits y lo inyecta en el HTML; la página consulta el estado y
+reanuda el polling automáticamente si falla la primera consulta. El código local y
+POST /api/v1/pair quedan como compatibilidad heredada, pero la interfaz actual no los
+usa. Tras detener/reiniciar el portal hay que abrir de nuevo la URL.
+
+Advertencia de acceso: cualquier dispositivo de la red local que alcance esa URL puede
+usar las operaciones del portal. El token inyectado no es una barrera de autenticación
+frente a esos visitantes. El servicio sigue siendo HTTP sin cifrado; usar solo en una
+red de confianza. Cambiar la UI de la consola no endurece ni cifra este acceso.
+
+## Historial: 19 octubre 2026
 
 Integrado en `main` mediante merge6e2983386b, junto con portugués brasileño y ajustes
 de idioma de juegos, versión0.3.4.0. El árbol del merge coincide con la punta integrada
@@ -60,8 +74,8 @@ confirmed_offset/bytes/total_us/write_us/flush_us/checkpoint_us/reader_calls. No
 persisten ni gobiernan recuperación. Relojes solo por fase/escritura1MiB, no callback.
 total menos escritura/flush/checkpoint incluye red, copias, locks, apertura/truncado y
 espacio: no llamarlo tiempo de red puro ni CPU. Perfil no avanza si falla checkpoint.
-En consola del navegador emparejado, con candidato instalado, consultar sin mostrar
-sesión: `(await (await api('/api/v1/status')).json()).transfer.performance`.
+En la consola del navegador que abrió la URL, con candidato instalado, consultar sin
+mostrar la sesión: `(await (await api('/api/v1/status')).json()).transfer.performance`.
 
 El ejecutable anterior al cambio también falló el rechazo413 de POST2048bytes con
 errorRead del cliente. Cierre inmediato SD_BOTH puede resetear TCP con datos pendientes.
@@ -99,26 +113,22 @@ serializados. Capacidad privateNetworkClientServer, internetClient conservada. S
 liga IPv4 concreta RFC1918/link-local, puerto8080, uso exclusivo. GetAdaptersAddresses
 enumera Ethernet/Wi-Fi operativas con gateway primero; no se usa NetworkInformation,
 limitado en Xbox. Solo los gates admiten loopback. Conexión/emparejamiento LAN Series
-confirmados por el usuario.
+confirmados históricamente por el usuario; el pairing fue eliminado de la interfaz web
+en esta actualización. GET / inyecta una sesión aleatoria de 256 bits y la página consulta
+el estado sin pedir código. El código local/API queda solo por compatibilidad heredada.
 
-Código 4 dígitos CSPRNG/5min consumido al emparejar, sesión256bits en RAM. Cinco intentos
-por minuto globales; renovar no reinicia limitador. No código/sesión en logs, URLs o
-almacenamiento persistente del navegador. HTTP LAN sin cifrado, sin UPnP ni CORS abierto;
-Host exacto IP:puerto, Origin exacto cuando existe y obligatorio al emparejar. CSP,
-no-store/no-referrer/nosniff. Sin explorador arbitrario de archivos ni descarga de claves.
-La página no oculta el formulario hasta validar la sesión y cargar el estado inicial.
-Si esa consulta falla, conserva el código y permite reintentar con la sesión ya creada,
-sin volver a consumir el código. Los errores de emparejamiento distinguen código caducado,
-dirección/Origin incorrecto, límite de intentos, portal no disponible y fallo de red;
-los mensajes están traducidos en zh/en/es/pt-BR.
-La transición al portal emparejado usa una clase explícita del documento, no CSS `:has()`;
-así los navegadores móviles sin ese selector tampoco se quedan en la pantalla de conexión
-después de aceptar el código.
+Esto elimina la barrera de emparejamiento: cualquier dispositivo que alcance la IP y
+puerto8080 puede abrir la página y obtener permiso para operar las funciones del portal,
+incluidas importaciones y acciones de biblioteca. No usar en una red no confiable; HTTP
+LAN no cifra el contenido. Se conservan binding IPv4 específico, Host exacto, Origin
+validado cuando existe, CSP, no-store/no-referrer/nosniff; estos controles no sustituyen
+el código de acceso eliminado. La sesión solo vive en RAM y se invalida al detener la app.
+El HTML se sirve con `Cache-Control: no-store`.
 
-El usuario no veía el código: fila8 fuera de7 filas visibles. Iniciar ahora abre página
-completa: URL, código112px agrupado4+4, Volver/Generar/Detener, mando/teclado/puntero con
-foco exclusivo y sin fondo animado. Volver mantiene conexión; fila activa reabre página.
-Caducidad/consumo muestran estado. La pantalla añade recepción/progreso del NSP.
+El problema histórico de la fila de código fuera del área visible motivó inicialmente
+una pantalla completa. Esa pantalla ahora muestra estado y acceso directo; ya no presenta
+código ni acción para generarlo. Mantiene Volver/Detener y navegación de mando/teclado.
+La pantalla añade recepción/progreso del NSP.
 
 ## Contrato HTTP
 
@@ -126,8 +136,8 @@ Cuatro workers/cola8, keepalive2s/10000requests, TCP_NODELAY. No buffers TCP gig
 ni cambios al autotuning. Pairing≤1024bytes, controles≤4096, PATCH≤64MiB; no aceptar
 Transfer-Encoding ni Content-Encoding. Ids aleatorios32hex y destinos decididos por servidor.
 
-- GET /: HTML/CSS/JS locales es/en, sin CDN ni framework.
-- POST /api/v1/pair: JSON code, Origin obligatorio, sesión una vez.
+- GET /: HTML/CSS/JS locales y sesión de 256 bits inyectada para acceso directo.
+- POST /api/v1/pair: endpoint heredado de compatibilidad; no se usa en la página actual.
 - GET /api/v1/status: Bearer, stage=nsp, uploads=true, snapshot de transferencia/espacio.
 - OPTIONS/POST /api/v1/uploads: tus1.0 creation; Upload-Length y Upload-Metadata con
   filename/fingerprint Base64 de texto (nunca Base64 del juego).
@@ -146,7 +156,8 @@ al preparar almacenamiento hace fallar Start de forma controlada. No tumbar la a
 Browser usa Blob.slice y bloques16MiB; una subida activa y cola. Progreso recibido y
 confirmado separados, velocidad de los últimos8 bloques confirmados y ETA de recepción
 (sin validación). Reintenta cortes consultando HEAD. Pausa, elimina parcial o renombra.
-Después de reiniciar app/browser: emparejar y seleccionar el mismo archivo para reanudar.
+Después de reiniciar app/browser: abrir de nuevo la URL y seleccionar el mismo archivo
+para reanudar.
 
 Servidor agrupa recv pequeños en buffer1MiB y WriteFile secuencial. FlushFileBuffers
 una vez por bloque HTTP, no por paquete. Datos se flushean antes del journal. Mantener
@@ -225,7 +236,7 @@ powershell -ExecutionPolicy Bypass -File tools\xbox\local-run.ps1 -NoBuild -Libr
 ```
 
 Desde móvil/PC, conectar, elegir NSP propio y nombre, Subir/reanudar. Interrumpir Wi-Fi;
-reiniciar app y navegador, emparejar y reseleccionar archivo. Comprobar biblioteca y
+reiniciar app y navegador, abrir de nuevo la URL y reseleccionar archivo. Comprobar biblioteca y
 arranque, colisiones, cancelación y pausas. Medir memoria/CPU, recepción, validación y
 publicación por separado. No usar estas pruebas para certificar FPS.
 
@@ -244,7 +255,7 @@ Opt-in `network_import_gate=1`, sin efecto en la biblioteca normal. Revisa los N
 LocalState/games con el validador de producción y elige el menor válido >4GiB. Transfiere
 por HTTP loopback a una carpeta exclusiva LocalState/network-import-gate-*, bloques16MiB,
 buffer cliente1MiB y buffer receptor1MiB. Tras pasar4GiB destruye servidor/cliente,
-reconstruye el store desde los checkpoints, empareja de nuevo y confirma HEAD antes de
+reconstruye el store desde los checkpoints, abre la página para obtener otra sesión y confirma HEAD antes de
 continuar. Finaliza con ValidateUploadedNsp y rename; compara todos los bytes con el original,
 comprueba tamaño/mtime del origen y elimina solo su fixture al pasar. No añade el juego
 a la biblioteca de uso normal. La comparación completa existe solo en el gate.
@@ -391,8 +402,8 @@ La solución ajena en d3d12_query_cache.cpp queda sin incluir; no se hace push.
 
 El usuario confirma que la captura .15 termina correctamente y solicita exportar
 la carpeta log completa porque la descarga de Device Portal no funciona. La nueva
-opcion del portal de Jadyx es **Comprimir y descargar logs**; se usa desde el PC
-emparejado, manteniendo la app en biblioteca. La actualizacion sobre la instalacion
+opcion del portal de Jadyx es **Comprimir y descargar logs**; se usa desde el PC que
+abre la URL, manteniendo la app en biblioteca. La actualizacion sobre la instalacion
 existente conserva LocalState y las capturas anteriores; no es necesario repetirlas.
 
 La biblioteca configura el root mediante GetEdenPath(LogDir), independiente de la
@@ -418,7 +429,7 @@ la siguiente preparacion lo sustituye. Reserva32MiB de disco, inventario<=100000
 entradas y contenido<=1TiB; comprueba espacio durante la escritura. Cancelar/parar
 el portal pide stop y une el worker, eliminando el parcial, sin modificar los logs.
 
-API, con los mismos controles Host/Origin/emparejamiento del portal:
+API, con los mismos controles Host/Origin y la sesión directa del portal:
 - POST /api/v1/logs/export: 202, preparacion asincrona; 409 si ya esta ocupada.
 - DELETE /api/v1/logs/export: solicita cancelacion.
 - GET /api/v1/status: campo logs con progreso/estado; no devuelve secretos/rutas.

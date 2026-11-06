@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const page=fs.readFileSync('src/jadyx/storage/network_portal_page.h','utf8');
-const script=page.match(/<script>([\s\S]*?)<\/script>/)[1];
+const session='a'.repeat(64);
+const script=page.match(/<script>([\s\S]*?)<\/script>/)[1].replace("'__JADYX_PORTAL_SESSION__'",`'${session}'`);
+assert.match(page,/<div class="app" id="app">/,'portal main view is available before any pairing step');
 async function scenario(language){
  const elements=new Map(),callbacks=new Map();let clicks=0,grants=0,exports=0;
  const element=id=>{
@@ -14,9 +16,8 @@ async function scenario(language){
  let logs={supported:true,phase:'idle',busy:false,total:5*1024**3,processed:0,compressed:0};
  const response=(data,status=200)=>({ok:status<400,status,json:async()=>structuredClone(data)});
  const fetch=async(path,options={})=>{
-  if(path==='/api/v1/pair')return response({session:'a'.repeat(64)});
-  assert.equal(options.headers.Authorization,'Bearer '+'a'.repeat(64));
-  if(path==='/api/v1/status')return response({logs,transfer:{},system:{}});
+  assert.equal(options.headers.Authorization,'Bearer '+session);
+  if(path==='/api/v1/status')return response({logs,uploads:true,transfer:{},system:{},update:{}});
   if(path==='/api/v1/logs/export'){
    if(options.method==='DELETE'){logs={...logs,phase:'cancelled',busy:false};return response(logs);}
    assert.equal(options.method,'POST');exports++;logs={...logs,phase:'scanning',busy:true};return response(logs,202);
@@ -27,11 +28,11 @@ async function scenario(language){
   }
   throw Error('Unexpected fetch (archive must be a native download): '+path);
  };
- const context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{toggle(){}}}},navigator:{language},localStorage:{getItem:()=>language,setItem(){}},location:{search:''},
+ const context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{add(){},remove(){},toggle(){}}}},navigator:{language},localStorage:{getItem:()=>language,setItem(){}},location:{search:''},
   URLSearchParams,TextEncoder,Uint8Array,Uint32Array,DataView,performance,fetch,
   setInterval:()=>1,clearInterval:()=>{},setTimeout,btoa:v=>Buffer.from(v,'binary').toString('base64')});
  vm.runInContext(script,context);
- await callbacks.get('pair:submit')({preventDefault(){}});
+ await vm.runInContext('portalReady',context);
  assert.equal(element('log-export').hidden,false);
  await callbacks.get('logs-download:click')();assert.equal(exports,1);
  // The download starts with the export and streams while it compresses.

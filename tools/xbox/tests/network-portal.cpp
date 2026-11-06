@@ -85,11 +85,23 @@ int main(int argc,char** argv) {
     httplib::Headers headers{{"Origin", origin}};
     const auto page = client.Get("/");
     if (Status(page) != 200) std::fprintf(stderr, "HTTP page status=%d transport=%d\n", Status(page), static_cast<int>(page.error()));
-    // Four digits turn up in any page by chance; the page being the fixed one is what keeps the code out.
-    Check(Status(page) == 200 && page->body == Jadyx::PortalWeb::Page, "page never contains pairing secret");
+    const auto page_token = [](const std::string& body) {
+        const auto start = body.find("let session='");
+        if (start == std::string::npos) return std::string{};
+        const auto first = start + std::string_view{"let session='"}.size();
+        const auto end = body.find('\'', first);
+        return end == std::string::npos ? std::string{} : body.substr(first, end - first);
+    };
+    const auto direct_token = Status(page) == 200 ? page_token(page->body) : std::string{};
+    Check(Status(page) == 200 && page->body != Jadyx::PortalWeb::Page &&
+          page->body.find("__JADYX_PORTAL_SESSION__") == std::string::npos &&
+          direct_token.size() == 64 && direct_token.find_first_not_of("0123456789abcdef") == std::string::npos,
+          "page opens directly with a server-issued session and no pairing form");
     Check(page->get_header_value("Cache-Control") == "no-store" &&
           !page->get_header_value("Content-Security-Policy").empty(), "page security headers");
     Check(Status(client.Get("/api/v1/status")) == 401, "anonymous status rejected");
+    httplib::Headers direct_auth{{"Authorization", "Bearer " + direct_token}};
+    Check(Status(client.Get("/api/v1/status", direct_auth)) == 200, "page-issued session opens the portal directly");
     Check(Status(client.Get("/", {{"Host", "attacker.invalid"}})) == 403, "Host allowlist");
     Check(Status(client.Get("/", {{"Origin", "http://attacker.invalid"}})) == 403, "Origin allowlist");
     Check(Status(client.Post("/api/v1/pair", "{}", "application/json")) == 401, "pair requires Origin");
@@ -164,7 +176,7 @@ int main(int argc,char** argv) {
     Check(portal.RenewCode(), "renew local code");
     Check(Status(client.Post("/api/v1/pair", headers, "{}", "application/json")) == 429,
           "renewal cannot bypass rate limit");
-    Check(Status(client.Get("/api/v1/status", authenticated)) == 200, "renewal preserves paired session");
+    Check(Status(client.Get("/api/v1/status", authenticated)) == 200, "renewal preserves session");
     Check(Status(client.Post("/api/v1/uploads", authenticated, "{}", "application/json")) == 412,
           "upload protocol version required");
     const auto oversized=client.Post("/api/v1/pair", headers, std::string(2048, 'x'), "application/json");
@@ -182,9 +194,13 @@ int main(int argc,char** argv) {
     Check(!client.Get("/"), "socket closed after Stop");
     Check(portal.Start("127.0.0.1", static_cast<unsigned short>(port)), "restart same port");
     Check(Status(client.Get("/api/v1/status", authenticated)) == 401, "old session invalid after restart");
-    const auto replacement = portal.Status();
-    Check(Status(client.Post("/api/v1/pair", headers, Json{{"code", replacement.code}}.dump(), "application/json")) == 200,
-          "new server session pairs");
+    const auto replacement_page = client.Get("/");
+    const auto replacement_token = Status(replacement_page) == 200 ? page_token(replacement_page->body) : std::string{};
+    Check(replacement_token.size() == 64 && replacement_token != token,
+          "restarted portal issues a fresh direct-entry session");
+    httplib::Headers replacement_auth{{"Authorization", "Bearer " + replacement_token}};
+    Check(Status(client.Get("/api/v1/status", replacement_auth)) == 200,
+          "restarted portal opens without code pairing");
     // The transport polls at 100 ms but a live peer may legitimately pause longer.
     const auto slow=::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     Check(slow!=INVALID_SOCKET,"slow peer socket");
@@ -222,6 +238,6 @@ int main(int argc,char** argv) {
     UploadTests(port,argc>1 && std::string_view{argv[1]}=="--large");
     SystemUploadTests(port);
     LibraryTests(port);
-    std::puts("PASS: network portal native TCP pairing/origin/limits/restart/partial-body lifecycle; Xbox/AppContainer LAN gate still required");
+    std::puts("PASS: network portal native TCP direct entry/origin/limits/restart/partial-body lifecycle; Xbox/AppContainer LAN gate still required");
     } catch (const std::exception& error) { std::fprintf(stderr,"FAIL: uncaught %s\n",error.what());return 1; }
 }

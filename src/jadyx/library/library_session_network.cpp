@@ -229,7 +229,7 @@ void LibrarySession::HandleNetworkScreen() {
         else if (actions & Refresh || (actions & Play && configuration.network_action == 1)) {
             // The update guide stays open when its portal failed to start: this retries it.
             if (configuration.network_update && !network_portal.Status().running) StartPortal();
-            else configuration.notice = network_portal.RenewCode() ? std::wstring{} : std::wstring{Tr(T::NetworkStartFailed)};
+            else configuration.notice.clear();
             configuration.network = network_portal.Status();
         } else if (actions & Play && configuration.network_action == 2) {
             network_portal.Stop();

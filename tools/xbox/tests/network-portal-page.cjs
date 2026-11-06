@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 const fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const header=fs.readFileSync('src/jadyx/storage/network_portal_page.h','utf8');
-const script=header.match(/<script>([\s\S]*?)<\/script>/)[1];
+const session='a'.repeat(64);
+const script=header.match(/<script>([\s\S]*?)<\/script>/)[1].replace("'__JADYX_PORTAL_SESSION__'",`'${session}'`);
 new vm.Script(script,{filename:'network-portal-page.js'});
-assert.doesNotMatch(header,/body:has\(#pair\[hidden\]\)/,'portal state must not depend on CSS :has support');
+assert.doesNotMatch(header,/body:has\(#pair\[hidden\]\)/,'portal view state must not depend on CSS :has support');
+assert.doesNotMatch(header,/<form id="pair">|id="code"|id="connect"/,'portal must open without a pairing form');
+assert.match(header,/<div class="app" id="app">/);
+assert.match(header,/let session='__JADYX_PORTAL_SESSION__'/,'server injects the session into the main page');
 // /logo.png serves the app's controller logo; its embedded bytes must match the packaged asset.
 const logo=fs.readFileSync('src/jadyx/storage/network_portal_logo.h','utf8').match(/Logo\[\]=\{([\s\S]*?)\};/)[1].match(/0x[0-9a-f]{2}/g).map(Number);
 assert.ok(Buffer.from(logo).equals(fs.readFileSync('dist/uwp/Assets/Square150x150Logo.scale-200.png')),'network_portal_logo.h is stale');
@@ -39,22 +43,15 @@ for(const size of [0,3,55,56,63,64,65,128,131072]){
  console.log('PASS: browser keys/firmware, ZIP/loose, review warning checkbox and explicit confirmation (mock HTTP)');
  for(const language of ['default','zh-CN','es','en','pt-BR'])await libraryScenario(language);
  console.log('PASS: browser library, save/cheat import, ticketed export/download, updates and game deletion (mock HTTP)');
- await browserScenario({pairStatus:401,language:'zh-CN'});
- await browserScenario({pairStatus:403,language:'zh-CN'});
- await browserScenario({pairStatus:429,language:'zh-CN'});
- await browserScenario({pairStatus:503,language:'zh-CN'});
- await browserScenario({pairNetworkError:true,language:'zh-CN'});
- await browserScenario({invalidSession:true,language:'zh-CN'});
  await browserScenario({initialStatusFailure:true,language:'zh-CN'});
  await browserScenario({pollSessionLost:true,language:'zh-CN'});
- console.log('PASS: pairing view transitions, localized errors, retry, invalid session, status recovery and session loss');
+ console.log('PASS: direct portal entry without code, initial status retry and session-loss reporting');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
 async function browserScenario(options){
- const elements=new Map(),callbacks=new Map();let autoPairPromise;
+ const elements=new Map(),callbacks=new Map();
  const element=id=>{
   if(!elements.has(id))elements.set(id,{value:'',textContent:'',files:[],hidden:false,disabled:false,setAttribute(){},removeAttribute(){},
-   requestSubmit:()=>{autoPairPromise=callbacks.get('pair:submit')({preventDefault(){}});},
    addEventListener:(event,callback)=>callbacks.set(id+':'+event,callback)});
   return elements.get(id);
  };
@@ -63,17 +60,12 @@ async function browserScenario(options){
   assert.ok(end-start<=65536,'large file must never be loaded as ArrayBuffer');return new Uint8Array(end-start).buffer;
  }})};
  let job={id:'',phase:'idle',offset:0,received:0,length:0,free_bytes:80*1024**3,available:true,busy:false,error:''};
- let writes=0,lost=false,controlPromise,context,pairRequests=0,statusRequests=0,pollCallback;const completed=[];
+ let writes=0,lost=false,controlPromise,context,statusRequests=0,pollCallback;const completed=[];
  const bodyClasses=new Set();
  const response=(status,json={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(json)),
   headers:{get:key=>Object.entries(headers).find(([name])=>name.toLowerCase()===key.toLowerCase())?.[1]??null}});
  const fetch=async(url,request={})=>{
-  if(url==='/api/v1/pair'){
-   pairRequests++;
-   if(options.pairNetworkError)throw Error('offline');
-   return response(options.pairStatus||200,{session:options.invalidSession?'not-a-session':'a'.repeat(64)});
-  }
-  assert.equal(request.headers.Authorization,'Bearer '+'a'.repeat(64));
+  assert.equal(request.headers.Authorization,'Bearer '+session);
   if(url==='/api/v1/status'){
    statusRequests++;
    if(options.initialStatusFailure&&statusRequests===1)return response(503,{error:'interrupted'});
@@ -119,53 +111,30 @@ async function browserScenario(options){
   localStorage:{getItem:()=>options.language||'es',setItem(){}},
   setTimeout:callback=>{queueMicrotask(callback);return 1;},setInterval:callback=>{pollCallback=callback;return 1;},clearInterval:()=>{},selected});
  vm.runInContext(script,context);
+ await vm.runInContext('portalReady',context);
+ assert.equal(statusRequests,1,'opening the page requests status without pairing');
+ assert.equal(element('upload').hidden,false,'opening the page reveals the upload interface');
+ assert.equal(bodyClasses.has('paired'),!options.initialStatusFailure,'direct entry reflects whether status loaded');
+ element('app').hidden=true;
  if(options.resume||options.different){
   const signature=await vm.runInContext('fingerprint(selected)',context);
   const offset=4*1024**3+1048576;
   job={...job,id,name,fingerprint:options.different?'b'.repeat(64):signature,length,offset,received:offset,phase:'paused'};
  }
- element('code').value='1234';callbacks.get('code:input')({});await autoPairPromise;
  if(options.initialStatusFailure){
-  assert.equal(element('pair').hidden,false,'status failure must not hide the code form');
-  assert.equal(element('connect').disabled,false,'status failure can be retried');
-  assert.equal(element('code').value,'1234','status failure preserves the code');
-  assert.equal(bodyClasses.has('paired'),false,'status failure must not enter the paired view');
-  assert.equal(element('connection').textContent,'无法连接到主机。请确认设备在同一网络，并使用 Jadyx 显示的地址。');
-  await callbacks.get('pair:submit')({preventDefault(){}});
-  assert.equal(pairRequests,1,'retry uses the established session instead of consuming the code again');
+  assert.notEqual(element('message').textContent,'','initial status failure is shown');
+  assert.equal(bodyClasses.has('paired'),false,'failed status does not show a connected state');
+  await pollCallback();
   assert.equal(statusRequests,2);
-  assert.equal(element('pair').hidden,true,'retry completes the pairing view transition');
-  assert.equal(element('code').value,'');
-  assert.equal(bodyClasses.has('paired'),true,'successful retry enters the paired view');
+  assert.equal(element('message').textContent,'','polling recovers without pairing');
+  assert.equal(bodyClasses.has('paired'),true,'recovered status exposes the portal navigation');
   return;
  }
- if(options.pairStatus||options.pairNetworkError||options.invalidSession){
-  assert.equal(element('pair').hidden,false,'failed pairing keeps the code form visible');
-  assert.equal(element('connect').disabled,false,'failed pairing can be retried');
-  assert.equal(element('code').value,'1234','failed pairing preserves the entered code');
-  assert.equal(bodyClasses.has('paired'),false,'failed pairing must not enter the paired view');
-  const expected=options.pairNetworkError
-   ?'无法连接到主机。请确认设备在同一网络，并使用 Jadyx 显示的地址。'
-   :options.pairStatus===401
-    ?'验证码错误或已过期。请在 Jadyx 中重新生成。'
-    :options.pairStatus===403
-     ?'页面地址与主机不匹配。请使用 Jadyx 显示的传送门地址。'
-     :options.pairStatus===429
-      ?'尝试次数过多，请等待一分钟。'
-      :options.pairStatus===503
-       ?'传送门暂不可用。请检查主机上的 Jadyx 是否仍在游戏库页面。'
-       :'传送门暂不可用。请检查主机上的 Jadyx 是否仍在游戏库页面。';
-  assert.equal(element('connection').textContent,expected);
-  return;
- }
- assert.equal(element('pair').hidden,true,'successful pairing leaves the code form');
- assert.equal(bodyClasses.has('paired'),true,'successful pairing shows the upload app independent of CSS :has');
- assert.notEqual(element('connection').textContent,'','successful pairing shows confirmation');
  if(options.pollSessionLost){
   await pollCallback();
-  assert.equal(element('pair').hidden,false,'lost session restores the connection form');
-  assert.equal(bodyClasses.has('paired'),false,'lost session restores the gate view');
-  assert.equal(element('upload').hidden,true,'lost session hides upload controls');
+  assert.equal(element('message').textContent,'连接已失效，请刷新此页面重新连接；已确认的进度会保留。','lost session is reported');
+  assert.equal(element('upload').hidden,true,'session loss disables portal operations without showing a code form');
+  assert.equal(bodyClasses.has('paired'),false,'lost session hides the connected state');
   return;
  }
  element('files').files=options.queue?[selected,{...selected,name:'second.nsp'}]:[selected];callbacks.get('files:change')();
@@ -190,7 +159,6 @@ async function systemScenario(kind,zip,language){
  let system={phase:'idle',available:true,busy:false},confirmations=0,writes=0;
  const response=(status,data={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(data)),headers:{get:k=>headers[k]??null}});
  const fetch=async(url,request={})=>{
-  if(url==='/api/v1/pair')return response(200,{session:'a'.repeat(64)});
   assert.equal(request.headers.Authorization,'Bearer '+'a'.repeat(64));
   if(url==='/api/v1/status')return response(200,{uploads:true,transfer:{available:false},system_supported:true,system});
   if(url==='/api/v1/system/jobs'){
@@ -216,11 +184,11 @@ async function systemScenario(kind,zip,language){
   getResponseHeader(k){return k==='Upload-Offset'?String(system.file.offset):null;}
   send(blob){assert.equal(Number(this.headers['Upload-Offset']),system.file.offset);system.file.offset+=blob.size;system.file.received=system.file.offset;writes++;queueMicrotask(()=>{this.status=204;this.onload();});}
  }
- const context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{toggle(){}}}},navigator:{language},localStorage:{getItem:()=>language,setItem(){}},location:{search:''},URLSearchParams,TextEncoder,Uint8Array,Uint32Array,DataView,
+ const context=vm.createContext({document:{getElementById:element,documentElement:{},body:{classList:{add(){},remove(){},toggle(){}}}},navigator:{language},localStorage:{getItem:()=>language,setItem(){}},location:{search:''},URLSearchParams,TextEncoder,Uint8Array,Uint32Array,DataView,
   performance,XMLHttpRequest:XHR,fetch,btoa:v=>Buffer.from(v,'binary').toString('base64'),setTimeout:cb=>{queueMicrotask(cb);return 1;},setInterval:()=>1,clearInterval:()=>{}});
  vm.runInContext(script,context);
+ await vm.runInContext('portalReady',context);
  assert.equal(element('keys-title').textContent,language==='zh-CN'?'导入密钥':language==='es'?'Importar claves':language==='pt-BR'?'Importar chaves':'Import keys','initial keys card is a title, never an error');
- element('code').value='1234';await callbacks.get('pair:submit')({preventDefault(){}});
  element(kind+'-files').files=[selected];await callbacks.get(kind+'-send:click')();
  assert.equal(writes,1);assert.equal(system.phase,'review');assert.equal(confirmations,0);
  assert.equal(element('system-confirm').disabled,true);assert.match(element('system-versions').textContent,/20\.0\.0/);
@@ -244,7 +212,6 @@ async function libraryScenario(language){
  let removal={serial:0,game:'',content:'',phase:'',error:''},content={},data={},revision=1;
  const response=(status,data={},headers={})=>({status,ok:status>=200&&status<300,json:async()=>JSON.parse(JSON.stringify(data)),headers:{get:k=>headers[k]??null}});
  const fetch=async(url,request={})=>{
-  if(url==='/api/v1/pair')return response(200,{session:'a'.repeat(64)});
   assert.equal(request.headers.Authorization,'Bearer '+'a'.repeat(64));requests.push((request.method||'GET')+' '+url);
   // The console runs a queued deletion before the next status read.
   if(url==='/api/v1/status'){
@@ -308,7 +275,7 @@ async function libraryScenario(language){
   performance,XMLHttpRequest:XHR,fetch,URL:{createObjectURL:()=>'blob:x',revokeObjectURL(){}},btoa:v=>Buffer.from(v,'binary').toString('base64'),
   setTimeout:(cb,ms)=>{if(!(ms>=6000))queueMicrotask(cb);return 1;},clearTimeout:()=>{},setInterval:()=>1,clearInterval:()=>{}});
  vm.runInContext(script,context);
- element('code').value='1234';await element('pair').listeners.submit({preventDefault(){}});
+ await vm.runInContext('portalReady',context);
  assert.equal(element('cat-library').hidden,false);
  click(element('cat-library'));await delay();
  assert.equal(element('upload').hidden,true);assert.equal(element('library').hidden,false);assert.equal(element('games').children.length,1);
